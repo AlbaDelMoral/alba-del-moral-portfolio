@@ -1,0 +1,59 @@
+/* base.css — fonts + base properties, shared across the site */
+
+@font-face {
+  font-family: "ABCROM";
+  src: url("fonts/ABCROM-Book-Trial.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "ABCROM";
+  src: url("fonts/ABCROM-Light-Trial.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "ABCROM";
+  src: url("fonts/ABCROM-Heavy-Trial.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "ABCROM";
+  src: url("fonts/ABCROM-Bold-Trial.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "ABCMarist";
+  src: url("fonts/ABCMarist-Book-Trial.otf") format("opentype");
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Mercury";
+  src: url("fonts/MercuryTextG1-Roman-Pro.otf") format("opentype");
+  font-weight: 100;
+  font-style: normal;
+}
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Full page */
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  font-family: "ABCROM", sans-serif;
+}

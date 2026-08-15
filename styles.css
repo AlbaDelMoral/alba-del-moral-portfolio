@@ -1,0 +1,472 @@
+/* Smooth cross-page navigation — opts every same-origin page navigation
+   on the site into the browser's native View Transition (a crossfade by
+   default). This is what makes clicking the name back to the homepage
+   (and every other page-to-page link) feel like a transition instead of
+   an abrupt reload. Supported in Chrome/Edge; browsers that don't support
+   it just fall back to a normal instant navigation, no errors. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.4s;
+}
+
+/* ── SLIDESHOW CONFIG — tweak these to change the look/feel ────────────────
+   --fade-duration  length of the crossfade between images.
+   --fade-ease      easing curve used for the crossfade.
+   --slide-interval how long each image stays on screen, in ms (read by
+                    slideshow.js).
+   --first-slide-interval how long just the first image stays on screen,
+                    in ms — separate from --slide-interval so it can be
+                    shorter.
+   --menu-opacity         opacity of the menu bar's white background (0–1).
+   --work-item-height     fixed height every work-page thumbnail is cropped
+                          to (px) — keeps all images the same size.
+   --reveal-duration      length of each project's slide-up/fade-in.
+   --reveal-distance      how far (px) the project slides up from.
+   --nav-work-list-gap    space between the logo/Archive/Info row and the
+                          work title list below it, in .menu.
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  --fade-duration: 1.2s;
+  --fade-ease: ease;
+  --slide-interval: 8000;
+  --first-slide-interval: 3000;
+  --menu-opacity: 1;
+  --work-item-height: 460px;
+  --reveal-duration: 0.8s;
+  --reveal-distance: 60px;
+  --nav-work-list-gap: 200px;
+}
+
+/* Home page — the slideshow. Whole site uses a 12-column grid. */
+.home-view {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  width: 100vw;
+  height: 100vh;
+  background-color: rgb(255, 255, 255);
+}
+
+/* Project list — part of the persistent .menu overlay (same fixed block
+   as the logo/Archive/Info), so it appears identically on every page,
+   not just the homepage. Sits in row 2 of .menu's grid, under the
+   logo/nav row, in the same empty left columns that work.html and the
+   project pages already leave blank. .menu has no overflow hidden, so
+   this is free to run taller than .menu's own 14vh and just show below
+   it; max-height/overflow-y keep it from running off tall lists. */
+.nav-work-list {
+  grid-column: 1 / 4;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: var(--nav-work-list-gap);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.nav-work-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.nav-work-item:visited,
+.nav-work-item:active {
+  color: inherit;
+}
+
+.nav-work-item:hover {
+  cursor:
+    url("images/cursor-help.svg") 12 12,
+    help;
+}
+
+.nav-work-item:hover .nav-work-item-title,
+.nav-work-item:hover .nav-work-item-subtitle,
+.nav-work-item.active .nav-work-item-title,
+.nav-work-item.active .nav-work-item-subtitle {
+  color: #1daeeb;
+}
+
+/* On a project page, one item in the list carries .active — fade out
+   the rest so the current project stands out. Scoped with :has() so
+   pages with no active item (homepage, Work, Archive, Info) are
+   unaffected. */
+.nav-work-list:has(.nav-work-item.active) .nav-work-item:not(.active) {
+  opacity: 0.4;
+}
+
+.nav-work-item-title {
+  font-weight: 700; /* Bold */
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.nav-work-item-subtitle {
+  font-weight: 100; /* Book */
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCMarist", sans-serif;
+}
+
+/* Slideshow occupies columns 5-12 — one column narrower than before,
+   to make room for Archive/Info now each sitting in their own menu
+   column instead of stacked in a single column. */
+.container {
+  grid-column: 5 / 13;
+  display: flex;
+  height: 100%;
+  padding-left: 20px;
+  padding-right: 0px;
+}
+
+.slideshow-frame {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+}
+
+/* Slideshow crossfade — each image fills its container edge to edge */
+.slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  display: block;
+  transition: opacity var(--fade-duration) var(--fade-ease);
+}
+
+.slide.active {
+  opacity: 1;
+}
+
+/* Overlay menu — identical markup duplicated on every page since this
+   site has no build step / includes. Stays fixed above the page content
+   on every page. 12-column grid: name in col 1, col 2 empty as spacing,
+   Archive in col 3, Info in col 4. */
+.menu {
+  position: fixed;
+  inset: 0;
+
+  width: 100%;
+  height: 14vh;
+  /* Same left/right padding as .work-view (and any other page grid), so
+     the 12 columns here land on the exact same pixel boundaries as the
+     12 columns used for page content — that's what lets .work-intro
+     just say grid-column and have it line up with the images. */
+  padding: 20px 15px 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: start;
+
+  z-index: 100;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* The menu's background rectangle only shows on the Work page — every
+   other page (including the homepage) keeps it transparent. */
+body.work-page .menu {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(70px);
+}
+
+.menu > * {
+  pointer-events: auto;
+}
+
+/* Work page — the project gallery. Same 12-column grid as the rest of
+   the site. */
+.work-view {
+  display: grid;
+  min-height: 100vh;
+  background: #ffffff;
+  padding: 0 15px;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+/* .work-grid spans the full width — each .work-item positions its own
+   contents using the same 12-column system as .menu (see above), so
+   there's no separate/nested column math to keep in sync. */
+.work-grid {
+  grid-column: 1 / 13;
+  display: flex;
+  flex-direction: column;
+  padding-top: 200px;
+  padding-bottom: 60px;
+}
+
+/* Number in col 4, name in cols 5-6, col 7 left empty as a gap, image in
+   the last 5 columns (cols 8-12) — cols 1-3 stay empty on the left. */
+.work-item {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: start;
+  padding: 5px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.work-item-number {
+  grid-column: 4;
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+}
+
+.work-item-text {
+  grid-column: 5 / 7;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.work-item-title {
+  font-weight: 800; /* Heavy */
+  color: rgb(124, 124, 124);
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+}
+
+.work-item-subtitle,
+.work-item-year {
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+}
+
+/* col 7 is intentionally left empty as a gap between the name and image */
+
+.work-item-image {
+  grid-column: 8 / 13;
+  display: block;
+}
+
+.work-item-image img {
+  width: 100%;
+  height: var(--work-item-height);
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+}
+
+/* Entrance animation — every project slides up from below while fading
+   in. Plays automatically on page load since this is a fresh document
+   each time — no JS needed to trigger or replay it. */
+@keyframes work-item-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--reveal-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.work-item {
+  animation: work-item-reveal var(--reveal-duration) ease;
+}
+
+/* Project page — one per project (project-*.html). Same 12-column grid
+   and padding as .menu/.work-view. Auto-placement puts .project-images
+   (cols 5-12, matching the homepage slideshow's width so the image never
+   overlaps the Info nav button) in row 1, then since .project-title
+   (cols 5-6) and .project-description (cols 7-12) both need columns
+   already taken in row 1, they fall through to row 2 together, side by
+   side. */
+.project-view {
+  display: grid;
+  min-height: 100vh;
+  background: #fff;
+  padding: 0 15px 60px;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: start;
+}
+
+.project-images {
+  grid-column: 5 / 13;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding-left: 20px;
+}
+
+.project-images img,
+.project-images video {
+  width: 100%;
+  height: auto;
+  display: block;
+  animation: work-item-reveal var(--reveal-duration) ease;
+}
+
+/* Placeholder background while a video's data (and its aspect-ratio,
+   set inline per-video below) hasn't loaded yet. */
+.project-images video {
+  background: #f4f4f4;
+}
+
+/* Narrower than the rest of .project-images (which spans columns 5-13) —
+   sized down since this video is tall/portrait and would otherwise be
+   huge at full width. */
+.project-images video.project-video-narrow {
+  width: 50%;
+  align-self: center;
+}
+
+/* Styled the same as .work-item-title in the Work list. */
+.project-title {
+  grid-column: 5 / 7;
+  font-weight: 800; /* Heavy */
+  color: rgb(124, 124, 124);
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+}
+
+.project-description {
+  grid-column: 7 / 13;
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+  line-height: 1.6;
+}
+
+/* Archive page */
+.archive-view {
+  display: grid;
+  min-height: 100vh;
+  background: #fff;
+  padding: 0 10px;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+.archive-content {
+  grid-column: 2 / 8;
+  padding-top: 120px;
+}
+
+.archive-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.archive-list div {
+  color: black;
+  font-size: 18pt;
+  font-weight: 800; /* Heavy */
+  font-family: "ABCMarist", sans-serif;
+}
+
+/* Info page */
+.info-view {
+  display: grid;
+  min-height: 100vh;
+  background: #fff;
+  padding: 0 10px;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+.info-content {
+  grid-column: 2 / 6;
+  padding-top: 120px;
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+  line-height: 1.6;
+}
+
+/* Typography */
+
+.menu a {
+  text-decoration: none;
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+}
+
+/* Name */
+
+.logo {
+  grid-column: 1 / 3;
+  position: relative;
+  /* The Heavy (800) weight renders with slightly different glyph metrics
+     than the Book (400) weight used by the nav links, which otherwise
+     throws off the top alignment with "Work" by a few px. */
+  margin-top: -4px;
+}
+
+.logo a {
+  font-weight: 700; /* Bold */
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+}
+
+/* Archive/Info each get their own menu column, next to the name. */
+.nav-link {
+  font-weight: 400; /* Book */
+  transition: font-weight 0.15s ease;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  font-weight: 700; /* Bold */
+}
+
+.nav-archive {
+  grid-column: 3;
+  text-align: right;
+}
+
+.nav-info {
+  grid-column: 4;
+  text-align: right;
+}
+
+/* Work-page-only intro paragraph, in the menu (only present in work.html's
+   copy of the menu markup). .menu and .work-view now share identical
+   padding and the same 12-column grid, so this just needs to match
+   .work-item-image's grid-column (8/13) directly — no calc() needed. */
+.work-intro {
+  grid-column: 8 / 13;
+  color: grey;
+  font-size: 8pt;
+  font-family: "ABCROM", sans-serif;
+  line-height: 1.5;
+  font-weight: bold;
+}
+
+/* Cursor-following caption shown while hovering a photo */
+.hover-caption {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+  white-space: nowrap;
+  mix-blend-mode: difference;
+  z-index: 200;
+}
+
+.hover-caption.visible {
+  opacity: 1;
+  padding-bottom: 15px;
+}
