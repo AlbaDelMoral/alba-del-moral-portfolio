@@ -51,6 +51,31 @@ function initSlideshow(container, intervalMs, firstIntervalMs) {
   }, firstIntervalMs);
 }
 
+function initHorizontalScroll(container) {
+  // Turns vertical wheel input into horizontal scroll on this container.
+  // Only intercepts the wheel event while there's still room to scroll in
+  // that direction — once the strip hits its start/end edge, the event is
+  // left alone so the page's normal vertical scroll takes back over.
+  container.addEventListener(
+    "wheel",
+    (event) => {
+      const atStart = container.scrollLeft <= 0;
+      const atEnd =
+        container.scrollLeft >=
+        container.scrollWidth - container.clientWidth - 1;
+      const scrollingForward = event.deltaY > 0;
+
+      if ((atEnd && scrollingForward) || (atStart && !scrollingForward)) {
+        return;
+      }
+
+      event.preventDefault();
+      container.scrollLeft += event.deltaY;
+    },
+    { passive: false },
+  );
+}
+
 function initHoverCaption(caption, trigger) {
   trigger.addEventListener("mouseenter", () => {
     caption.classList.add("visible");
@@ -85,4 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const caption = document.querySelector(".hover-caption");
   const trigger = document.querySelector("[data-hover-trigger]");
   if (caption && trigger) initHoverCaption(caption, trigger);
+
+  document
+    .querySelectorAll("[data-horizontal-scroll]")
+    .forEach(initHorizontalScroll);
 });

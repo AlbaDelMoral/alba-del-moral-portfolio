@@ -300,7 +300,7 @@ body.work-page .menu {
   grid-column: 5 / 13;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 24px;
   padding-left: 20px;
 }
@@ -327,9 +327,76 @@ body.work-page .menu {
   align-self: center;
 }
 
+/* Experimental horizontal-scroll variant (currently only used on the Risk
+   project page) — the strip scrolls sideways instead of the images
+   stacking vertically. Vertical wheel input is remapped to horizontal
+   scroll by initHorizontalScroll() in slideshow.js, wired up via the
+   [data-horizontal-scroll] attribute on this element. */
+.project-images--horizontal {
+  flex-direction: row;
+  height: 100vh;
+  margin-bottom: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+/* The horizontal-scroll gallery is the entire page — no vertical scroll
+   at all for now, only the strip's own horizontal scroll. */
+body.risk-page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.risk-page .project-view {
+  min-height: 100vh;
+  padding-bottom: 0;
+}
+
+.project-images--horizontal::-webkit-scrollbar {
+  display: none;
+}
+
+.project-images--horizontal img,
+.project-images--horizontal video {
+  width: auto;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.project-image-slide {
+  position: relative;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+/* Its own slide in the horizontal strip, sitting in the gap between the
+   video and the first image, instead of overlaid on top of either one —
+   opaque white background so it reads as a distinct "page" of its own.
+   Width is 4 grid columns, using the same column math as the site's
+   12-col grid (30px = the two 15px side margins from .project-view/
+   .menu). Top-aligned with padding-top matching .menu's own 20px top
+   padding, so the text starts at the same height as Archive/Info. */
+.project-text-slide {
+  width: calc((100vw - 30px) / 12 * 4);
+  background: #fff;
+  display: flex;
+  align-items: flex-start;
+  padding: 20px 20px 0;
+  box-sizing: border-box;
+}
+
+.project-image-overlay-text {
+  color: grey;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+  line-height: 1.2;
+}
+
 /* Styled the same as .work-item-title in the Work list. */
 .project-title {
   grid-column: 5 / 7;
+  padding-left: 20px;
   font-weight: 800; /* Heavy */
   color: rgb(124, 124, 124);
   font-size: 9pt;
@@ -337,7 +404,10 @@ body.work-page .menu {
 }
 
 .project-description {
-  grid-column: 7 / 13;
+  grid-column: 9 / 13;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
   color: grey;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
@@ -428,12 +498,12 @@ body.work-page .menu {
 
 .nav-archive {
   grid-column: 3;
-  text-align: right;
+  text-align: center;
 }
 
 .nav-info {
   grid-column: 4;
-  text-align: right;
+  text-align: center;
 }
 
 /* Work-page-only intro paragraph, in the menu (only present in work.html's
