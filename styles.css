@@ -1,9 +1,9 @@
 /* Smooth cross-page navigation — opts every same-origin page navigation
    on the site into the browser's native View Transition (a crossfade by
-   default). This is what makes clicking the name back to the homepage
-   (and every other page-to-page link) feel like a transition instead of
-   an abrupt reload. Supported in Chrome/Edge; browsers that don't support
-   it just fall back to a normal instant navigation, no errors. */
+   default). router.js also wraps its own JS-driven content swaps in
+   document.startViewTransition() when available, reusing this same
+   config. Supported in Chrome/Edge; browsers that don't support it just
+   fall back to a normal instant swap, no errors. */
 @view-transition {
   navigation: auto;
 }
@@ -22,12 +22,8 @@
                     in ms — separate from --slide-interval so it can be
                     shorter.
    --menu-opacity         opacity of the menu bar's white background (0–1).
-   --work-item-height     fixed height every work-page thumbnail is cropped
-                          to (px) — keeps all images the same size.
    --reveal-duration      length of each project's slide-up/fade-in.
    --reveal-distance      how far (px) the project slides up from.
-   --nav-work-list-gap    space between the logo/Archive/Info row and the
-                          work title list below it, in .menu.
    ─────────────────────────────────────────────────────────────────────── */
 :root {
   --fade-duration: 1.2s;
@@ -35,98 +31,40 @@
   --slide-interval: 8000;
   --first-slide-interval: 3000;
   --menu-opacity: 1;
-  --work-item-height: 460px;
-  --reveal-duration: 0.8s;
-  --reveal-distance: 60px;
-  --nav-work-list-gap: 200px;
+  --reveal-duration: 1.6s;
+  --reveal-distance: 20px;
 }
 
-/* Home page — the slideshow. Whole site uses a 12-column grid. */
-.home-view {
+/* Shared 8-column grid used by .menu and every page's content view
+   (.home-view/.archive-view/.info-view/.project-view), all with matching
+   padding, so their columns land on identical pixel boundaries. Column 1
+   is the logo, column 2 is the nav column, columns 3-8 are page content. */
+.menu,
+.home-view,
+.archive-view,
+.info-view,
+.project-view {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: minmax(150px, 1.8fr) 1.5fr repeat(6, 1.3fr);
+  column-gap: 14px;
+  padding: 20px 15px 20px 30px;
+}
+
+/* Home page — the slideshow. */
+.home-view {
   width: 100vw;
   height: 100vh;
   background-color: rgb(255, 255, 255);
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-/* Project list — part of the persistent .menu overlay (same fixed block
-   as the logo/Archive/Info), so it appears identically on every page,
-   not just the homepage. Sits in row 2 of .menu's grid, under the
-   logo/nav row, in the same empty left columns that work.html and the
-   project pages already leave blank. .menu has no overflow hidden, so
-   this is free to run taller than .menu's own 14vh and just show below
-   it; max-height/overflow-y keep it from running off tall lists. */
-.nav-work-list {
-  grid-column: 1 / 4;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-top: var(--nav-work-list-gap);
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.nav-work-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-.nav-work-item:visited,
-.nav-work-item:active {
-  color: inherit;
-}
-
-.nav-work-item:hover {
-  cursor:
-    url("images/cursor-help.svg") 12 12,
-    help;
-}
-
-.nav-work-item:hover .nav-work-item-title,
-.nav-work-item:hover .nav-work-item-subtitle,
-.nav-work-item.active .nav-work-item-title,
-.nav-work-item.active .nav-work-item-subtitle {
-  color: #1daeeb;
-}
-
-/* On a project page, one item in the list carries .active — fade out
-   the rest so the current project stands out. Scoped with :has() so
-   pages with no active item (homepage, Work, Archive, Info) are
-   unaffected. */
-.nav-work-list:has(.nav-work-item.active) .nav-work-item:not(.active) {
-  opacity: 0.4;
-}
-
-.nav-work-item-title {
-  font-weight: 700; /* Bold */
-  color: grey;
-  font-size: 9pt;
-  font-family: "ABCROM", sans-serif;
-  letter-spacing: 0.05em;
-}
-
-.nav-work-item-subtitle {
-  font-weight: 100; /* Book */
-  color: grey;
-  font-size: 9pt;
-  font-family: "ABCMarist", sans-serif;
-}
-
-/* Slideshow occupies columns 5-12 — one column narrower than before,
-   to make room for Archive/Info now each sitting in their own menu
-   column instead of stacked in a single column. */
+/* Slideshow fills the whole content area (columns 3-8). */
 .container {
-  grid-column: 5 / 13;
+  grid-column: 3 / 9;
   display: flex;
   height: 100%;
   padding-left: 20px;
-  padding-right: 0px;
 }
 
 .slideshow-frame {
@@ -153,151 +91,217 @@
   opacity: 1;
 }
 
-/* Overlay menu — identical markup duplicated on every page since this
-   site has no build step / includes. Stays fixed above the page content
-   on every page. 12-column grid: name in col 1, col 2 empty as spacing,
-   Archive in col 3, Info in col 4. */
+/* Overlay menu — a single persistent block that's part of every page's
+   markup but never gets replaced by router.js's content swap (only
+   #page-content is). Genuinely full-viewport now (no more 14vh cap), so
+   the nav column can sit in normal flex flow instead of needing
+   position:absolute + calc(vh) hacks to reach the middle/bottom of the
+   screen. Column 1 = logo, column 2 = nav column, columns 3-8 stay empty
+   spacers here (the actual page content lives in the separate
+   .home-view/.archive-view/etc. grid underneath). */
 .menu {
   position: fixed;
   inset: 0;
-
-  width: 100%;
-  height: 14vh;
-  /* Same left/right padding as .work-view (and any other page grid), so
-     the 12 columns here land on the exact same pixel boundaries as the
-     12 columns used for page content — that's what lets .work-intro
-     just say grid-column and have it line up with the images. */
-  padding: 20px 15px 0;
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
   align-items: start;
-
   z-index: 100;
   pointer-events: none;
   background: transparent;
-}
-
-/* The menu's background rectangle only shows on the Work page — every
-   other page (including the homepage) keeps it transparent. */
-body.work-page .menu {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(70px);
 }
 
 .menu > * {
   pointer-events: auto;
 }
 
-/* Work page — the project gallery. Same 12-column grid as the rest of
-   the site. */
-.work-view {
-  display: grid;
-  min-height: 100vh;
-  background: #ffffff;
-  padding: 0 15px;
-  grid-template-columns: repeat(12, 1fr);
+.logo {
+  grid-column: 1;
+  position: relative;
+  /* The Bold weight renders with slightly different glyph metrics than
+     the Book weight used by the nav links, which otherwise throws off
+     the top alignment by a few px. */
+  margin-top: -4px;
 }
 
-/* .work-grid spans the full width — each .work-item positions its own
-   contents using the same 12-column system as .menu (see above), so
-   there's no separate/nested column math to keep in sync. */
-.work-grid {
-  grid-column: 1 / 13;
+.logo a {
+  display: block;
+  font-weight: 700; /* Bold */
+  font-size: 8pt;
+  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.39em;
+}
+
+/* Single vertical stack: Works link, 6 project items, Archive link, 3
+   archive items, Info link — all in normal flex flow, in that literal
+   order, identical on every page. Section headers (Works/Archive/Info)
+   sit close to their own list (see .nav-work-list/.nav-archive-list
+   margin-top below); the bigger gap lives on .nav-archive/.nav-info
+   instead, separating the three sections from each other. Top margin
+   pushes "Works" down to line up with "DEL MORAL" (the logo's second
+   line) instead of "ALBA" (its first). */
+.nav-column {
+  grid-column: 2;
+  margin-top: calc(9pt * 1.45);
   display: flex;
   flex-direction: column;
-  padding-top: 200px;
-  padding-bottom: 60px;
+  padding-right: 20px;
 }
 
-/* Number in col 4, name in cols 5-6, col 7 left empty as a gap, image in
-   the last 5 columns (cols 8-12) — cols 1-3 stay empty on the left. */
-.work-item {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  align-items: start;
-  padding: 5px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.15);
-}
-
-.work-item-number {
-  grid-column: 4;
-  color: grey;
-  font-size: 9pt;
+.menu a {
+  text-decoration: none;
+  color: #565656;
+  font-size: 8pt;
   font-family: "ABCROM", sans-serif;
 }
 
-.work-item-text {
-  grid-column: 5 / 7;
+.nav-link {
+  font-weight: 700; /* Bold — same weight as the logo */
+  text-transform: uppercase;
+  letter-spacing: 0.39em;
+}
+
+/* Bigger gap before each new section (Archive/Info) than the tighter
+   spacing between items within a section. */
+.nav-archive,
+.nav-info {
+  margin-top: 24px;
+}
+
+.nav-work-list,
+.nav-archive-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.nav-work-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.work-item-title {
-  font-weight: 800; /* Heavy */
-  color: rgb(124, 124, 124);
-  font-size: 9pt;
-  font-family: "ABCROM", sans-serif;
-}
-
-.work-item-subtitle,
-.work-item-year {
-  color: grey;
-  font-size: 9pt;
-  font-family: "ABCROM", sans-serif;
-}
-
-/* col 7 is intentionally left empty as a gap between the name and image */
-
-.work-item-image {
-  grid-column: 8 / 13;
-  display: block;
-}
-
-.work-item-image img {
-  width: 100%;
-  height: var(--work-item-height);
-  object-fit: cover;
-  display: block;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
 }
 
-/* Entrance animation — every project slides up from below while fading
-   in. Plays automatically on page load since this is a fresh document
-   each time — no JS needed to trigger or replay it. */
-@keyframes work-item-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(var(--reveal-distance));
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Small dot marking the current page's item — sits in the middle of the
+   gap between the logo's right edge (end of column 1) and the start of
+   the title (column 2), vertically centered on the title's own height.
+   Colored per-project via --project-color (set inline per item, e.g.
+   style="--project-color: #8e7cc3"); items with no color set (currently
+   just the Archive placeholders) fall back to blue. */
+.nav-work-item.active::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--project-color, #1daeeb);
+  transform: translate(-50%, -50%);
 }
 
-.work-item {
-  animation: work-item-reveal var(--reveal-duration) ease;
+.nav-work-item:visited,
+.nav-work-item:active {
+  color: inherit;
 }
 
-/* Project page — one per project (project-*.html). Same 12-column grid
-   and padding as .menu/.work-view. Auto-placement puts .project-images
-   (cols 5-12, matching the homepage slideshow's width so the image never
-   overlaps the Info nav button) in row 1, then since .project-title
-   (cols 5-6) and .project-description (cols 7-12) both need columns
-   already taken in row 1, they fall through to row 2 together, side by
-   side. */
+.nav-work-item:hover {
+  cursor:
+    url("images/cursor-help.svg") 12 12,
+    help;
+}
+
+.nav-work-item:hover .nav-work-item-title,
+.nav-work-item:hover .nav-work-item-subtitle {
+  color: var(--project-color, #1daeeb);
+}
+
+.nav-work-item.active .nav-work-item-title,
+.nav-work-item.active .nav-work-item-subtitle {
+  color: var(--project-color, #1daeeb);
+}
+
+/* On a project page, one item in the work list carries .active — fade
+   out the rest of the work list AND the whole archive list, so the two
+   sections stay visually tied together instead of just dimming within
+   their own list. Being on the Archive page (.nav-archive carries
+   .active, since no individual archive item has a real page yet) does
+   the same in reverse, fading the whole work list. Scoped with :has() on
+   the shared .nav-column ancestor so it works regardless of which
+   section comes first in the DOM. */
+.nav-column:has(.nav-work-list .nav-work-item.active) .nav-work-list .nav-work-item:not(.active),
+.nav-column:has(.nav-work-list .nav-work-item.active) .nav-archive-list .nav-work-item,
+.nav-column:has(.nav-archive-list .nav-work-item.active) .nav-archive-list .nav-work-item:not(.active),
+.nav-column:has(.nav-archive-list .nav-work-item.active) .nav-work-list .nav-work-item,
+.nav-column:has(.nav-archive.active) .nav-work-list .nav-work-item {
+  opacity: 0.4;
+}
+
+/* Hovering a dimmed item brings it back to full opacity (on top of the
+   color turning blue) instead of staying a washed-out "low-opacity
+   blue". !important because the dimming rules above out-specificity a
+   plain :hover selector (their :has() arguments count toward
+   specificity). */
+.nav-work-item:hover {
+  opacity: 1 !important;
+}
+
+.nav-work-item-title {
+  font-weight: 100; /* Book — the only ABCMarist weight available */
+  color: #565656;
+  font-size: 9pt;
+  font-family: "ABCMarist", sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.nav-work-item-subtitle {
+  display: none;
+  font-weight: 300; /* Light */
+  color: #565656;
+  font-size: 9pt;
+  font-family: "ABCROM", sans-serif;
+}
+
+/* Scroll-triggered entrance — each element starts faded/shifted down and
+   settles into place the moment it scrolls into view. initScrollReveal()
+   in slideshow.js adds .is-visible via IntersectionObserver the first
+   time an element crosses the viewport threshold, then stops watching it
+   (so it never re-plays on scroll-back). Kept deliberately small/slow
+   (see --reveal-distance/--reveal-duration) for a subtle effect. */
+.project-images > img,
+.project-images > video,
+.project-images-text,
+.project-description {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+  transition:
+    opacity var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.project-images > img.is-visible,
+.project-images > video.is-visible,
+.project-images-text.is-visible,
+.project-description.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Project page — one per project (project-*.html). Same 8-column grid
+   and padding as .menu. Auto-placement puts .project-images (cols 3-8)
+   in row 1, then since .project-title (cols 3-4) and .project-description
+   (cols 6-8) both need columns already taken in row 1, they fall through
+   to row 2 together, side by side. */
 .project-view {
-  display: grid;
   min-height: 100vh;
   background: #fff;
-  padding: 0 15px 60px;
-  grid-template-columns: repeat(12, 1fr);
   align-items: start;
 }
 
 .project-images {
-  grid-column: 5 / 13;
+  grid-column: 3 / 9;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -310,7 +314,6 @@ body.work-page .menu {
   width: 100%;
   height: auto;
   display: block;
-  animation: work-item-reveal var(--reveal-duration) ease;
 }
 
 /* Placeholder background while a video's data (and its aspect-ratio,
@@ -319,204 +322,90 @@ body.work-page .menu {
   background: #f4f4f4;
 }
 
-/* Narrower than the rest of .project-images (which spans columns 5-13) —
+/* Narrower than the rest of .project-images (which spans columns 3-9) —
    sized down since this video is tall/portrait and would otherwise be
    huge at full width. */
 .project-images video.project-video-narrow {
-  width: 50%;
+  width: auto;
+  height: 100vh;
+  max-width: 100%;
   align-self: center;
 }
 
-/* Experimental horizontal-scroll variant (currently only used on the Risk
-   project page) — the strip scrolls sideways instead of the images
-   stacking vertically. Vertical wheel input is remapped to horizontal
-   scroll by initHorizontalScroll() in slideshow.js, wired up via the
-   [data-horizontal-scroll] attribute on this element. */
-.project-images--horizontal {
-  flex-direction: row;
-  height: 100vh;
-  margin-bottom: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-/* The horizontal-scroll gallery is the entire page — no vertical scroll
-   at all for now, only the strip's own horizontal scroll. */
-body.risk-page {
-  height: 100vh;
-  overflow: hidden;
-}
-
-body.risk-page .project-view {
-  min-height: 100vh;
-  padding-bottom: 0;
-}
-
-.project-images--horizontal::-webkit-scrollbar {
-  display: none;
-}
-
-.project-images--horizontal img,
-.project-images--horizontal video {
-  width: auto;
-  height: 100%;
-  flex-shrink: 0;
-}
-
-.project-image-slide {
-  position: relative;
-  height: 100%;
-  flex-shrink: 0;
-}
-
-/* Its own slide in the horizontal strip, sitting in the gap between the
-   video and the first image, instead of overlaid on top of either one —
-   opaque white background so it reads as a distinct "page" of its own.
-   Width is 4 grid columns, using the same column math as the site's
-   12-col grid (30px = the two 15px side margins from .project-view/
-   .menu). Top-aligned with padding-top matching .menu's own 20px top
-   padding, so the text starts at the same height as Archive/Info. */
-.project-text-slide {
-  width: calc((100vw - 30px) / 12 * 4);
-  background: #fff;
-  display: flex;
-  align-items: flex-start;
-  padding: 20px 20px 0;
-  box-sizing: border-box;
-}
-
-.project-image-overlay-text {
-  color: grey;
-  font-size: 9pt;
-  font-family: "ABCROM", sans-serif;
-  line-height: 1.2;
-}
-
-/* Styled the same as .work-item-title in the Work list. */
+/* Styled the same as .nav-work-item-title. */
 .project-title {
-  grid-column: 5 / 7;
+  grid-column: 3 / 5;
   padding-left: 20px;
   font-weight: 800; /* Heavy */
-  color: rgb(124, 124, 124);
+  color: #333333;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
 }
 
 .project-description {
-  grid-column: 9 / 13;
+  grid-column: 6 / 9;
   display: flex;
   flex-direction: column;
   gap: 1em;
-  color: grey;
-  font-size: 9pt;
+  color: #565656;
+  font-size: 8pt;
   font-family: "ABCROM", sans-serif;
   line-height: 1.6;
+}
+
+/* Experimental variant (currently only Stories of a Walk) — spans the
+   same columns as .project-images above it instead of the narrow
+   default width, at a much larger size. */
+.project-description--full {
+  grid-column: 3 / 9;
+  padding-left: 20px;
+  font-size: 18pt;
+  line-height: 1.3;
+}
+
+/* Experimental variant (currently only Risk of (Im)Perfection) — big
+   text block sitting inline between the video and the first image, as
+   another item in .project-images' flex stack, so it inherits the same
+   width/alignment as the images around it without needing its own
+   grid-column or padding-left. */
+.project-images-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  color: #565656;
+  font-size: 18pt;
+  font-family: "ABCROM", sans-serif;
+  line-height: 1.3;
 }
 
 /* Archive page */
 .archive-view {
-  display: grid;
   min-height: 100vh;
   background: #fff;
-  padding: 0 10px;
-  grid-template-columns: repeat(8, 1fr);
 }
 
 .archive-content {
-  grid-column: 2 / 8;
+  grid-column: 3 / 7;
   padding-top: 120px;
-}
-
-.archive-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.archive-list div {
-  color: black;
-  font-size: 18pt;
-  font-weight: 800; /* Heavy */
-  font-family: "ABCMarist", sans-serif;
-}
-
-/* Info page */
-.info-view {
-  display: grid;
-  min-height: 100vh;
-  background: #fff;
-  padding: 0 10px;
-  grid-template-columns: repeat(8, 1fr);
-}
-
-.info-content {
-  grid-column: 2 / 6;
-  padding-top: 120px;
-  color: grey;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
   line-height: 1.6;
 }
 
-/* Typography */
+/* Info page */
+.info-view {
+  min-height: 100vh;
+  background: #fff;
+}
 
-.menu a {
-  text-decoration: none;
-  color: grey;
+.info-content {
+  grid-column: 3 / 7;
+  padding-top: 120px;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
-}
-
-/* Name */
-
-.logo {
-  grid-column: 1 / 3;
-  position: relative;
-  /* The Heavy (800) weight renders with slightly different glyph metrics
-     than the Book (400) weight used by the nav links, which otherwise
-     throws off the top alignment with "Work" by a few px. */
-  margin-top: -4px;
-}
-
-.logo a {
-  font-weight: 700; /* Bold */
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-}
-
-/* Archive/Info each get their own menu column, next to the name. */
-.nav-link {
-  font-weight: 400; /* Book */
-  transition: font-weight 0.15s ease;
-}
-
-.nav-link:hover,
-.nav-link.active {
-  font-weight: 700; /* Bold */
-}
-
-.nav-archive {
-  grid-column: 3;
-  text-align: center;
-}
-
-.nav-info {
-  grid-column: 4;
-  text-align: center;
-}
-
-/* Work-page-only intro paragraph, in the menu (only present in work.html's
-   copy of the menu markup). .menu and .work-view now share identical
-   padding and the same 12-column grid, so this just needs to match
-   .work-item-image's grid-column (8/13) directly — no calc() needed. */
-.work-intro {
-  grid-column: 8 / 13;
-  color: grey;
-  font-size: 8pt;
-  font-family: "ABCROM", sans-serif;
-  line-height: 1.5;
-  font-weight: bold;
+  line-height: 1.6;
 }
 
 /* Cursor-following caption shown while hovering a photo */
@@ -528,7 +417,7 @@ body.risk-page .project-view {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
-  color: grey;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
   white-space: nowrap;

@@ -29,6 +29,13 @@
 }
 
 @font-face {
+  font-family: "ABCROM Condensed";
+  src: url("fonts/ABCROMCondensed-Bold-Trial.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
   font-family: "ABCMarist";
   src: url("fonts/ABCMarist-Book-Trial.otf") format("opentype");
   font-weight: 100;

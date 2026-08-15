@@ -12,69 +12,88 @@
     <link rel="stylesheet" href="base.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <div class="project-view">
-      <div class="project-images">
-        <video
-          autoplay
-          muted
-          controls
-          playsinline
-          class="project-video-narrow"
-          data-hover-trigger
-          style="aspect-ratio: 1280 / 2274"
-        >
-          <source src="images/balenciaga/heel1.mp4" type="video/mp4" />
-        </video>
-        <img src="images/balenciaga/heel_cover.jpg" alt="" />
-        <img src="images/balenciaga/heels_together.png" alt="" />
+  <body data-page="project">
+    <main id="page-content">
+      <div class="project-view">
+        <div class="project-images">
+          <video
+            autoplay
+            muted
+            controls
+            playsinline
+            class="project-video-narrow"
+            data-hover-trigger
+            style="aspect-ratio: 1280 / 2274"
+          >
+            <source src="images/balenciaga/heel1.mp4" type="video/mp4" />
+          </video>
+          <img src="images/balenciaga/heel_cover.jpg" alt="" />
+          <img src="images/balenciaga/heels_together.png" alt="" />
+        </div>
+        <h1 class="project-title">Balenciaga</h1>
+        <p class="project-description">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+          tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+          veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+          commodo consequat.
+        </p>
       </div>
-      <h1 class="project-title">Balenciaga</h1>
-      <p class="project-description">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-        veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-        commodo consequat.
-      </p>
-    </div>
+
+      <div class="hover-caption">turn on volume</div>
+    </main>
 
     <div class="menu">
       <div class="logo">
-        <a href="index.html" class="logo-link">Alba del Moral</a>
+        <a href="index.html" class="logo-link">Alba<br />del Moral</a>
       </div>
 
-      <a href="archive.html" class="nav-link nav-archive">Archive</a>
-      <a href="info.html" class="nav-link nav-info">Info</a>
+      <div class="nav-column">
+        <a href="index.html" class="nav-link nav-works active">Works</a>
+        <div class="nav-work-list">
+          <a href="project-art-of-counting.html" class="nav-work-item" style="view-transition-name: nav-item-art-of-counting; --project-color: #ff6b6b">
+            <span class="nav-work-item-title">the art of counting</span>
+            <span class="nav-work-item-subtitle">Final degree project</span>
+          </a>
+          <a href="project-cota.html" class="nav-work-item" style="view-transition-name: nav-item-cota; --project-color: #8e7cc3">
+            <span class="nav-work-item-title">COTA</span>
+            <span class="nav-work-item-subtitle">Branding and Packaging</span>
+          </a>
+          <a href="project-balenciaga.html" class="nav-work-item active" style="view-transition-name: nav-item-balenciaga; --project-color: #2ec4b6">
+            <span class="nav-work-item-title">Balenciaga</span>
+            <span class="nav-work-item-subtitle">3D Modelling and Animation</span>
+          </a>
+          <a href="project-risk.html" class="nav-work-item" style="view-transition-name: nav-item-risk; --project-color: #e09f3e">
+            <span class="nav-work-item-title">The Risk of (Im)Perfection</span>
+            <span class="nav-work-item-subtitle">Editorial Design</span>
+          </a>
+          <a href="project-stories-of-a-walk.html" class="nav-work-item" style="view-transition-name: nav-item-stories-of-a-walk; --project-color: #588157">
+            <span class="nav-work-item-title">Stories Of A Walk</span>
+            <span class="nav-work-item-subtitle">Book Design</span>
+          </a>
+          <a href="project-specimen.html" class="nav-work-item" style="view-transition-name: nav-item-specimen; --project-color: #e56399">
+            <span class="nav-work-item-title">Specimen</span>
+            <span class="nav-work-item-subtitle">Editorial</span>
+          </a>
+        </div>
 
-      <div class="nav-work-list">
-        <a href="project-art-of-counting.html" class="nav-work-item">
-          <span class="nav-work-item-title">the art of counting</span>
-          <span class="nav-work-item-subtitle">Final degree project</span>
-        </a>
-        <a href="project-cota.html" class="nav-work-item">
-          <span class="nav-work-item-title">COTA</span>
-          <span class="nav-work-item-subtitle">Branding and Packaging</span>
-        </a>
-        <a href="project-balenciaga.html" class="nav-work-item active">
-          <span class="nav-work-item-title">Balenciaga</span>
-          <span class="nav-work-item-subtitle">3D Modelling and Animation</span>
-        </a>
-        <a href="project-risk.html" class="nav-work-item">
-          <span class="nav-work-item-title">The Risk of (Im)Perfection</span>
-          <span class="nav-work-item-subtitle">Editorial Design</span>
-        </a>
-        <a href="project-stories-of-a-walk.html" class="nav-work-item">
-          <span class="nav-work-item-title">Stories Of A Walk</span>
-          <span class="nav-work-item-subtitle">Book Design</span>
-        </a>
-        <a href="project-specimen.html" class="nav-work-item">
-          <span class="nav-work-item-title">Specimen</span>
-          <span class="nav-work-item-subtitle">Editorial</span>
-        </a>
+        <a href="archive.html" class="nav-link nav-archive">Archive</a>
+        <div class="nav-archive-list">
+          <a href="#" class="nav-work-item">
+            <span class="nav-work-item-title">photography</span>
+          </a>
+          <a href="#" class="nav-work-item">
+            <span class="nav-work-item-title">Fun times</span>
+          </a>
+          <a href="#" class="nav-work-item">
+            <span class="nav-work-item-title">Experiments</span>
+          </a>
+        </div>
+
+        <a href="info.html" class="nav-link nav-info">Info</a>
       </div>
     </div>
 
-    <div class="hover-caption">turn on volume</div>
     <script src="slideshow.js"></script>
+    <script src="router.js"></script>
   </body>
 </html>

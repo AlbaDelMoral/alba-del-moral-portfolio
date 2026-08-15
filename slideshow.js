@@ -24,7 +24,7 @@ function syncVideoPlayback(slides) {
 
 function initSlideshow(container, intervalMs, firstIntervalMs) {
   const slides = Array.from(container.querySelectorAll(".slide"));
-  if (slides.length <= 1) return;
+  if (slides.length <= 1) return () => {};
 
   let current = 0;
   const advance = () => {
@@ -40,78 +40,97 @@ function initSlideshow(container, intervalMs, firstIntervalMs) {
   // no automatic timer at all.
   if (container.classList.contains("click-advance")) {
     container.addEventListener("click", advance);
-    return;
+    return () => container.removeEventListener("click", advance);
   }
 
   // First slide gets its own (shorter) timeout, then every slide after
   // that follows the regular interval.
-  setTimeout(() => {
+  let intervalId;
+  const timeoutId = setTimeout(() => {
     advance();
-    setInterval(advance, intervalMs);
+    intervalId = setInterval(advance, intervalMs);
   }, firstIntervalMs);
+
+  return () => {
+    clearTimeout(timeoutId);
+    clearInterval(intervalId);
+  };
 }
 
-function initHorizontalScroll(container) {
-  // Turns vertical wheel input into horizontal scroll on this container.
-  // Only intercepts the wheel event while there's still room to scroll in
-  // that direction — once the strip hits its start/end edge, the event is
-  // left alone so the page's normal vertical scroll takes back over.
-  container.addEventListener(
-    "wheel",
-    (event) => {
-      const atStart = container.scrollLeft <= 0;
-      const atEnd =
-        container.scrollLeft >=
-        container.scrollWidth - container.clientWidth - 1;
-      const scrollingForward = event.deltaY > 0;
-
-      if ((atEnd && scrollingForward) || (atStart && !scrollingForward)) {
-        return;
-      }
-
-      event.preventDefault();
-      container.scrollLeft += event.deltaY;
+function initScrollReveal(elements) {
+  // Each element starts hidden (see the CSS opposite .is-visible) and
+  // fades/slides into place the first time it crosses into the viewport.
+  // unobserve() after the first reveal so it doesn't re-trigger on
+  // scroll-back — a one-time entrance, not a repeating scroll effect.
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
     },
-    { passive: false },
+    { threshold: 0.15 },
   );
+
+  elements.forEach((el) => observer.observe(el));
+  return () => observer.disconnect();
 }
 
 function initHoverCaption(caption, trigger) {
-  trigger.addEventListener("mouseenter", () => {
-    caption.classList.add("visible");
-  });
-
-  trigger.addEventListener("mousemove", (event) => {
+  const onEnter = () => caption.classList.add("visible");
+  const onMove = (event) => {
     caption.style.left = `${event.clientX}px`;
     caption.style.top = `${event.clientY}px`;
-  });
+  };
+  const onLeave = () => caption.classList.remove("visible");
 
-  trigger.addEventListener("mouseleave", () => {
-    caption.classList.remove("visible");
-  });
+  trigger.addEventListener("mouseenter", onEnter);
+  trigger.addEventListener("mousemove", onMove);
+  trigger.addEventListener("mouseleave", onLeave);
+
+  return () => {
+    trigger.removeEventListener("mouseenter", onEnter);
+    trigger.removeEventListener("mousemove", onMove);
+    trigger.removeEventListener("mouseleave", onLeave);
+  };
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Any <video data-playback-rate="0.5"> plays at that speed instead of 1x.
-  document.querySelectorAll("video[data-playback-rate]").forEach((video) => {
+// Wires up every dynamic behavior scoped to `root` (either the whole
+// document on first load, or just the freshly-swapped #page-content
+// subtree after a client-side navigation) and returns a single cleanup
+// function that undoes all of it — router.js calls this cleanup right
+// before the next swap so intervals/observers/listeners never pile up
+// on detached DOM from earlier page visits.
+function initPageEffects(root) {
+  const cleanups = [];
+
+  root.querySelectorAll("video[data-playback-rate]").forEach((video) => {
     video.playbackRate = parseFloat(video.dataset.playbackRate);
   });
 
-  document.querySelectorAll(".slideshow").forEach((container) => {
+  root.querySelectorAll(".slideshow").forEach((container) => {
     const intervalMs = readCssVar(container, "--slide-interval", 8000);
     const firstIntervalMs = readCssVar(
       container,
       "--first-slide-interval",
       3000,
     );
-    initSlideshow(container, intervalMs, firstIntervalMs);
+    cleanups.push(initSlideshow(container, intervalMs, firstIntervalMs));
   });
 
-  const caption = document.querySelector(".hover-caption");
-  const trigger = document.querySelector("[data-hover-trigger]");
-  if (caption && trigger) initHoverCaption(caption, trigger);
+  const caption = root.querySelector(".hover-caption");
+  const trigger = root.querySelector("[data-hover-trigger]");
+  if (caption && trigger) {
+    cleanups.push(initHoverCaption(caption, trigger));
+  }
 
-  document
-    .querySelectorAll("[data-horizontal-scroll]")
-    .forEach(initHorizontalScroll);
-});
+  const revealTargets = root.querySelectorAll(
+    ".project-images > img, .project-images > video, .project-images-text, .project-description",
+  );
+  if (revealTargets.length > 0) {
+    cleanups.push(initScrollReveal(revealTargets));
+  }
+
+  return () => cleanups.forEach((cleanup) => cleanup());
+}
