@@ -455,6 +455,16 @@
   opacity: 0.6;
 }
 
+/* The button lives in the persistent .menu, which router.js never
+   replaces — so on pages with no process overlay (home/archive/info),
+   JS hides it via this attribute rather than the element simply not
+   existing there, in case a client-side navigation left it behind from a
+   project page. Needs to beat .process-toggle's own `display: flex`,
+   which would otherwise override the browser's default [hidden] rule. */
+.process-toggle[hidden] {
+  display: none;
+}
+
 .process-toggle-icon {
   display: flex;
 }

@@ -96,6 +96,79 @@ function initHoverCaption(caption, trigger) {
   };
 }
 
+// The "Look at info and process" button lives in .menu, which router.js
+// never replaces — only #page-content is swapped. So this has to be
+// re-run after every navigation (initPageEffects already does that) and
+// has to look the button up on `document`, not `root`, since it's never
+// inside the swapped-in subtree.
+function initProcessOverlay(root) {
+  const toggle = document.getElementById("processToggle");
+  if (!toggle) return () => {};
+
+  const label = toggle.querySelector(".process-toggle-label");
+
+  // Reset to a clean, closed state every time — without this, a button
+  // left mid-"open" on one project would carry that stale label/state
+  // into whatever page loads next, since the button itself never resets.
+  toggle.classList.remove("is-open");
+  toggle.setAttribute("aria-pressed", "false");
+  if (label) label.textContent = "Look at info and process";
+
+  const overlay = root.querySelector(".process-overlay");
+  if (!overlay) {
+    // This page has no process overlay (home/archive/info) — hide the
+    // button instead of leaving a dead control behind from whatever
+    // project the visitor was on before navigating here.
+    toggle.hidden = true;
+    return () => {};
+  }
+
+  toggle.hidden = false;
+  overlay.hidden = true;
+  overlay.classList.remove("is-open");
+
+  const backdrop = overlay.querySelector(".process-overlay-backdrop");
+  let hideTimer = null;
+
+  function setOpen(isOpen) {
+    clearTimeout(hideTimer);
+    toggle.classList.toggle("is-open", isOpen);
+    toggle.setAttribute("aria-pressed", String(isOpen));
+    if (label) {
+      label.textContent = isOpen
+        ? "Close info and process"
+        : "Look at info and process";
+    }
+
+    if (isOpen) {
+      overlay.hidden = false;
+      // Force a synchronous reflow so the browser commits the
+      // pre-transition (hidden) state before .is-open is added — more
+      // reliable than requestAnimationFrame, which browsers can throttle
+      // or pause on backgrounded/inactive tabs.
+      void overlay.offsetHeight;
+      overlay.classList.add("is-open");
+    } else {
+      overlay.classList.remove("is-open");
+      hideTimer = setTimeout(() => {
+        overlay.hidden = true;
+      }, 500);
+    }
+  }
+
+  const onToggleClick = () => setOpen(overlay.hidden);
+  const onBackdropClick = () => setOpen(false);
+
+  toggle.addEventListener("click", onToggleClick);
+  backdrop.addEventListener("click", onBackdropClick);
+
+  return () => {
+    clearTimeout(hideTimer);
+    toggle.removeEventListener("click", onToggleClick);
+    backdrop.removeEventListener("click", onBackdropClick);
+  };
+}
+
 // Wires up every dynamic behavior scoped to `root` (either the whole
 // document on first load, or just the freshly-swapped #page-content
 // subtree after a client-side navigation) and returns a single cleanup
@@ -131,6 +204,8 @@ function initPageEffects(root) {
   if (revealTargets.length > 0) {
     cleanups.push(initScrollReveal(revealTargets));
   }
+
+  cleanups.push(initProcessOverlay(root));
 
   return () => cleanups.forEach((cleanup) => cleanup());
 }

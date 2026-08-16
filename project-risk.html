@@ -120,48 +120,5 @@
 
     <script src="slideshow.js"></script>
     <script src="router.js"></script>
-    <script>
-      // Experimental — Risk of (Im)Perfection only. The overlay itself is
-      // position:absolute inside .project-view (not fixed), so it scrolls
-      // with the page instead of staying pinned to the viewport. Gallery
-      // layout is a static CSS grid (see .process-gallery-img:nth-child
-      // rules in styles.css), so no JS positioning is needed here.
-      (function () {
-        const toggle = document.getElementById("processToggle");
-        const overlay = document.getElementById("processOverlay");
-        if (!toggle || !overlay) return;
-
-        const label = toggle.querySelector(".process-toggle-label");
-        const backdrop = overlay.querySelector(".process-overlay-backdrop");
-        let hideTimer = null;
-
-        function setOpen(isOpen) {
-          clearTimeout(hideTimer);
-          toggle.classList.toggle("is-open", isOpen);
-          toggle.setAttribute("aria-pressed", String(isOpen));
-          label.textContent = isOpen
-            ? "Close info and process"
-            : "Look at info and process";
-
-          if (isOpen) {
-            overlay.hidden = false;
-            // Force a synchronous reflow so the browser commits the
-            // pre-transition (hidden) state before .is-open is added —
-            // more reliable than requestAnimationFrame, which browsers can
-            // throttle or pause on backgrounded/inactive tabs.
-            void overlay.offsetHeight;
-            overlay.classList.add("is-open");
-          } else {
-            overlay.classList.remove("is-open");
-            hideTimer = setTimeout(() => {
-              overlay.hidden = true;
-            }, 500);
-          }
-        }
-
-        toggle.addEventListener("click", () => setOpen(overlay.hidden));
-        backdrop.addEventListener("click", () => setOpen(false));
-      })();
-    </script>
   </body>
 </html>
