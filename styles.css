@@ -43,7 +43,8 @@
 .home-view,
 .archive-view,
 .info-view,
-.project-view {
+.project-view,
+.process-overlay {
   display: grid;
   grid-template-columns: minmax(150px, 1.8fr) 1.5fr repeat(6, 1.3fr);
   column-gap: 14px;
@@ -57,6 +58,7 @@
   background-color: rgb(255, 255, 255);
   padding-top: 0;
   padding-bottom: 0;
+  padding-right: 0;
 }
 
 /* Slideshow fills the whole content area (columns 3-8). */
@@ -102,7 +104,7 @@
 .menu {
   position: fixed;
   inset: 0;
-  align-items: start;
+  align-items: stretch;
   z-index: 100;
   pointer-events: none;
   background: transparent;
@@ -143,7 +145,7 @@
   margin-top: calc(9pt * 1.45);
   display: flex;
   flex-direction: column;
-  padding-right: 20px;
+  padding-right: 10px;
 }
 
 .menu a {
@@ -208,9 +210,7 @@
 }
 
 .nav-work-item:hover {
-  cursor:
-    url("images/cursor-help.svg") 12 12,
-    help;
+  cursor: var(--cursor-help, url("images/cursor-help.svg") 12 12), help;
 }
 
 .nav-work-item:hover .nav-work-item-title,
@@ -231,10 +231,18 @@
    the same in reverse, fading the whole work list. Scoped with :has() on
    the shared .nav-column ancestor so it works regardless of which
    section comes first in the DOM. */
-.nav-column:has(.nav-work-list .nav-work-item.active) .nav-work-list .nav-work-item:not(.active),
-.nav-column:has(.nav-work-list .nav-work-item.active) .nav-archive-list .nav-work-item,
-.nav-column:has(.nav-archive-list .nav-work-item.active) .nav-archive-list .nav-work-item:not(.active),
-.nav-column:has(.nav-archive-list .nav-work-item.active) .nav-work-list .nav-work-item,
+.nav-column:has(.nav-work-list .nav-work-item.active)
+  .nav-work-list
+  .nav-work-item:not(.active),
+.nav-column:has(.nav-work-list .nav-work-item.active)
+  .nav-archive-list
+  .nav-work-item,
+.nav-column:has(.nav-archive-list .nav-work-item.active)
+  .nav-archive-list
+  .nav-work-item:not(.active),
+.nav-column:has(.nav-archive-list .nav-work-item.active)
+  .nav-work-list
+  .nav-work-item,
 .nav-column:has(.nav-archive.active) .nav-work-list .nav-work-item {
   opacity: 0.4;
 }
@@ -272,7 +280,6 @@
    (see --reveal-distance/--reveal-duration) for a subtle effect. */
 .project-images > img,
 .project-images > video,
-.project-images-text,
 .project-description {
   opacity: 0;
   transform: translateY(var(--reveal-distance));
@@ -283,7 +290,6 @@
 
 .project-images > img.is-visible,
 .project-images > video.is-visible,
-.project-images-text.is-visible,
 .project-description.is-visible {
   opacity: 1;
   transform: translateY(0);
@@ -295,6 +301,9 @@
    (cols 6-8) both need columns already taken in row 1, they fall through
    to row 2 together, side by side. */
 .project-view {
+  position: relative; /* containing block for .process-overlay, so it
+    scrolls with this page's content instead of staying pinned to the
+    viewport like a fixed overlay would */
   min-height: 100vh;
   background: #fff;
   align-items: start;
@@ -363,21 +372,6 @@
   line-height: 1.3;
 }
 
-/* Experimental variant (currently only Risk of (Im)Perfection) — big
-   text block sitting inline between the video and the first image, as
-   another item in .project-images' flex stack, so it inherits the same
-   width/alignment as the images around it without needing its own
-   grid-column or padding-left. */
-.project-images-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1em;
-  color: #565656;
-  font-size: 18pt;
-  font-family: "ABCROM", sans-serif;
-  line-height: 1.3;
-}
-
 /* Archive page */
 .archive-view {
   min-height: 100vh;
@@ -428,4 +422,163 @@
 .hover-caption.visible {
   opacity: 1;
   padding-bottom: 15px;
+}
+
+/* ── PROCESS OVERLAY (experimental — Risk of (Im)Perfection only) ──────────
+   Toggled by .process-toggle at the bottom of the nav column. .process-overlay
+   is position:absolute inside .project-view (not fixed), so it scrolls with
+   the page's own content instead of staying pinned to the viewport. The
+   white wash, the description text and the gallery images are separate
+   layers so the 0.8 opacity only applies to the backdrop. */
+.process-toggle {
+  margin-top: auto; /* pushes it to the very bottom of the now full-height
+    .nav-column (see .menu's align-items: stretch above) */
+  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #565656;
+  font-family: "ABCMarist", sans-serif;
+  font-weight: 100; /* Book — the only ABCMarist weight available */
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.process-toggle:hover {
+  opacity: 0.6;
+}
+
+.process-toggle-icon {
+  display: flex;
+}
+
+.process-toggle-icon .icon-eye-open {
+  display: none;
+}
+
+.process-toggle.is-open .icon-eye-closed {
+  display: none;
+}
+
+.process-toggle.is-open .icon-eye-open {
+  display: block;
+}
+
+.process-overlay[hidden] {
+  display: none;
+}
+
+.process-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  align-items: start;
+  row-gap: 10px;
+}
+
+.process-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #fff;
+  opacity: 0;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+}
+
+.process-overlay.is-open .process-overlay-backdrop {
+  opacity: 0.92;
+}
+
+/* Columns 4-8 — never columns 1-2 (logo/nav) or 3 (kept clear so the
+   overlay's text lines up under the project's own images, which start at
+   column 3). Row 1 of the overlay's grid; the gallery below sits in row 2
+   so it can never overlap this text. Starts hidden/shifted down a touch and
+   fades/slides into place once .process-overlay.is-open is added (see
+   project-risk.html's script), instead of just popping in. */
+.process-overlay-text {
+  grid-column: 4 / 9;
+  grid-row: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  color: #565656;
+  font-size: 18pt;
+  font-family: "ABCROM", sans-serif;
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+.process-overlay.is-open .process-overlay-text {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Editorial-style grid of process photos, columns 3-8 only. Nests its own
+   6-column grid (mapped 1:1 to the outer grid's columns 3-8, same fr
+   ratios and gap, so its tracks land on the same pixel boundaries) so each
+   image can be given a fixed, non-overlapping column span below — no
+   randomness, no rotation. padding-left matches .project-images'
+   padding-left so these line up with the project's own images above. */
+.process-gallery {
+  grid-column: 3 / 9;
+  grid-row: 2;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(6, 1.3fr);
+  column-gap: 14px;
+  row-gap: 14px;
+  padding-left: 20px;
+}
+
+.process-gallery-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+.process-overlay.is-open .process-gallery-img {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.process-gallery-img:nth-child(1) {
+  grid-column: 1 / span 2;
+  transition-delay: 0.05s;
+}
+
+.process-gallery-img:nth-child(2) {
+  grid-column: 3 / span 3;
+  transition-delay: 0.12s;
+}
+
+.process-gallery-img:nth-child(3) {
+  grid-column: 1 / span 3;
+  transition-delay: 0.19s;
+}
+
+.process-gallery-img:nth-child(4) {
+  grid-column: 4 / span 3;
+  transition-delay: 0.26s;
 }
