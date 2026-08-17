@@ -16,7 +16,15 @@
     <main id="page-content">
       <div class="project-view">
         <div class="project-images">
-          <img src="images/art-of-counting/theart1.jpg" alt="" />
+          <video autoplay muted loop playsinline style="aspect-ratio: 1920 / 1080">
+            <source src="images/art-of-counting/video1_intro.mp4" type="video/mp4" />
+          </video>
+          <video autoplay muted loop playsinline style="aspect-ratio: 1920 / 1080">
+            <source src="images/art-of-counting/video2_sistema.mp4" type="video/mp4" />
+          </video>
+          <video autoplay muted loop playsinline style="aspect-ratio: 1920 / 1080">
+            <source src="images/art-of-counting/video3_interactive.mp4" type="video/mp4" />
+          </video>
         </div>
         <h1 class="project-title">the art of counting</h1>
         <p class="project-description">
@@ -26,28 +34,30 @@
           nisi ut aliquip ex ea commodo consequat.
         </p>
 
-        <div class="process-overlay" id="processOverlay" hidden>
-          <button type="button" class="process-overlay-backdrop" aria-label="Close process overlay"></button>
-          <div class="process-overlay-text">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-              do eiusmod tempor incididunt ut labore et dolore magna
-              aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-              ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            </p>
-            <p>
-              Duis aute irure dolor in reprehenderit in voluptate velit
-              esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
-              occaecat cupidatat non proident, sunt in culpa qui officia
-              deserunt mollit anim id est laborum.
-            </p>
-          </div>
-          <div class="process-gallery">
-            <!-- Add process photos to images/art-of-counting/process/ and
-                 reference them here, e.g.
-                 <img class="process-gallery-img" src="images/art-of-counting/process/photo.jpg" alt="">
-                 — up to 4 pick up the fixed grid layout defined by the
-                 .process-gallery-img:nth-child rules in styles.css. -->
+        <div class="process-overlay process-overlay--fixed-scroll" id="processOverlay" hidden>
+          <div class="process-overlay-inner">
+            <button type="button" class="process-overlay-backdrop" aria-label="Close process overlay"></button>
+            <div class="process-overlay-text">
+              <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
+                do eiusmod tempor incididunt ut labore et dolore magna
+                aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                ullamco laboris nisi ut aliquip ex ea commodo consequat.
+              </p>
+              <p>
+                Duis aute irure dolor in reprehenderit in voluptate velit
+                esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+                occaecat cupidatat non proident, sunt in culpa qui officia
+                deserunt mollit anim id est laborum.
+              </p>
+            </div>
+            <div class="process-gallery">
+              <!-- Add process photos to images/art-of-counting/process/ and
+                   reference them here, e.g.
+                   <img class="process-gallery-img" src="images/art-of-counting/process/photo.jpg" alt="">
+                   — up to 4 pick up the fixed grid layout defined by the
+                   .process-gallery-img:nth-child rules in styles.css. -->
+            </div>
           </div>
         </div>
       </div>

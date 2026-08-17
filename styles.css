@@ -35,6 +35,34 @@
   --reveal-distance: 20px;
 }
 
+/* ── PROCESS OVERLAY CONFIG — tweak these to change the look/feel ──────────
+   --process-overlay-opacity  opacity of the white wash behind the
+                               overlay's text/images (0–1).
+   --process-text-columns     grid-column range for the description text
+                               (e.g. "4 / 9" = columns 4-8).
+   --process-text-font-size   font size of the description text.
+   --process-gallery-gap      gap between images in the process photo
+                               gallery, and between the project's own
+                               images above it.
+   --process-fade-duration    length of the text/image entrance fade when
+                               the overlay opens.
+   --process-reveal-distance  how far (px) the text/images slide up as
+                               they fade in.
+   --process-overlay-blur     backdrop blur radius behind the overlay
+                               (currently Risk of (Im)Perfection only —
+                               see .process-overlay--fixed-scroll). 0 turns
+                               it off.
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  --process-overlay-opacity: 0.92;
+  --process-text-columns: 4 / 9;
+  --process-text-font-size: 14pt;
+  --process-gallery-gap: 4px;
+  --process-fade-duration: 0.5s;
+  --process-reveal-distance: 16px;
+  --process-overlay-blur: 0px;
+}
+
 /* Shared 8-column grid used by .menu and every page's content view
    (.home-view/.archive-view/.info-view/.project-view), all with matching
    padding, so their columns land on identical pixel boundaries. Column 1
@@ -209,10 +237,6 @@
   color: inherit;
 }
 
-.nav-work-item:hover {
-  cursor: var(--cursor-help, url("images/cursor-help.svg") 12 12), help;
-}
-
 .nav-work-item:hover .nav-work-item-title,
 .nav-work-item:hover .nav-work-item-subtitle {
   color: var(--project-color, #1daeeb);
@@ -280,7 +304,10 @@
    (see --reveal-distance/--reveal-duration) for a subtle effect. */
 .project-images > img,
 .project-images > video,
-.project-description {
+.project-description,
+.info-image1,
+.info-image2,
+.info-content {
   opacity: 0;
   transform: translateY(var(--reveal-distance));
   transition:
@@ -290,7 +317,10 @@
 
 .project-images > img.is-visible,
 .project-images > video.is-visible,
-.project-description.is-visible {
+.project-description.is-visible,
+.info-image1.is-visible,
+.info-image2.is-visible,
+.info-content.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
@@ -315,7 +345,7 @@
   flex-direction: column;
   gap: 4px;
   margin-bottom: 24px;
-  padding-left: 20px;
+  padding-left: 0px;
 }
 
 .project-images img,
@@ -387,19 +417,40 @@
   line-height: 1.6;
 }
 
-/* Info page */
+/* Info page — same column convention as the process overlay: content
+   images start at column 3 (the first two content columns, 3-4 here),
+   text takes the rest (5-8). */
 .info-view {
   min-height: 100vh;
   background: #fff;
+  align-items: start;
+  column-gap: 4px;
+}
+
+.info-image1 {
+  grid-column: 3 / 6;
+  padding-top: 100px;
+}
+
+.info-image2 {
+  grid-column: 6 / 7;
+  padding-top: 0px;
+}
+
+.info-image1 img,
+.info-image2 img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 .info-content {
-  grid-column: 3 / 7;
-  padding-top: 120px;
+  grid-column: 6 / 9;
+  padding-top: 0px;
   color: #565656;
-  font-size: 9pt;
-  font-family: "ABCROM", sans-serif;
-  line-height: 1.6;
+  font-size: 14pt;
+  font-family: "ABCMarist", sans-serif;
+  line-height: 1.2;
 }
 
 /* Cursor-following caption shown while hovering a photo */
@@ -490,7 +541,89 @@
   inset: 0;
   z-index: 10;
   align-items: start;
-  row-gap: 10px;
+  row-gap: 4px;
+}
+
+/* Experimental variant — currently only Risk of (Im)Perfection. Pins the
+   overlay to the viewport instead of letting it scroll with the page
+   underneath, and scrolls its own content internally, so opening it
+   always starts at the top (the text) regardless of where the visitor
+   had scrolled to on the page below, and the gallery is reached by
+   scrolling the overlay itself. .process-overlay itself is just the
+   fixed 100vh scrollport here — .process-overlay-inner (see below) is
+   the thing that actually holds the grid content and grows taller than
+   100vh, so the backdrop (sized to *it*, not the capped scrollport) can
+   stay behind everything as it scrolls, all the way to the bottom. */
+.process-overlay--fixed-scroll {
+  position: fixed;
+  overflow-y: auto;
+  /* Without this, scrolling past this element's own top/bottom edge
+     "chains" into scrolling the page underneath instead of just stopping
+     — this is what was still moving the project page after reaching the
+     end of the overlay's content, even with the page's own scroll
+     otherwise locked. */
+  overscroll-behavior: contain;
+  /* .process-overlay-inner (a plain block, full width by default) takes
+     over the grid/padding duties below — without these overrides, this
+     element's own inherited display:grid would make .process-overlay-inner
+     just one more grid item (collapsing it to a single column's width
+     instead of spanning the full viewport), and its inherited padding
+     would stack with .process-overlay-inner's own, doubling up. */
+  display: block;
+  padding: 0;
+  /* This frame itself is always exactly the viewport (position:fixed,
+     inset:0) and never moves — unlike .process-overlay-inner, which
+     scrolls and can briefly overshoot its own top/bottom during a fast
+     scroll or trackpad rubber-band bounce, exposing whatever's behind it
+     for a frame. Painting the wash here too, synced to the same
+     .is-open fade as .process-overlay-backdrop, means there's always a
+     solid wash immediately behind the scrolling content — never a gap
+     that flashes the project image underneath. */
+  background: rgba(255, 255, 255, 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  transition:
+    background-color 0.5s ease,
+    backdrop-filter 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease;
+}
+
+.process-overlay--fixed-scroll.is-open {
+  background: rgba(255, 255, 255, var(--process-overlay-opacity));
+  backdrop-filter: blur(var(--process-overlay-blur));
+  -webkit-backdrop-filter: blur(var(--process-overlay-blur));
+}
+
+/* .process-overlay-backdrop is the wash for the *default* (non-fixed-scroll)
+   variant used by the other 5 projects. Here it would just be a second
+   white layer stacked on top of the outer frame's own wash above —
+   compositing to a visibly different (more opaque) result, not just a
+   redundant one. It still needs to exist as a click-to-close hit target
+   sized to the actual content, so keep it but strip its fill entirely;
+   the outer frame is the single source of the visible wash here. All
+   three classes combined on one selector outweighs the shared rule's
+   specificity, so this wins regardless of source order. */
+.process-overlay.process-overlay--fixed-scroll.is-open
+  .process-overlay-backdrop {
+  background: none;
+  opacity: 1;
+}
+
+/* Added to <body> by slideshow.js while the fixed-scroll overlay is open,
+   so scrolling only moves the overlay's own content instead of also
+   scrolling the project page underneath. */
+.process-overlay-scroll-lock {
+  overflow: hidden;
+}
+
+.process-overlay--fixed-scroll .process-overlay-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(150px, 1.8fr) 1.5fr repeat(6, 1.3fr);
+  column-gap: 4px;
+  padding: 20px 15px 20px 30px;
+  row-gap: 4px;
+  align-items: start;
 }
 
 .process-overlay-backdrop {
@@ -506,7 +639,7 @@
 }
 
 .process-overlay.is-open .process-overlay-backdrop {
-  opacity: 0.92;
+  opacity: var(--process-overlay-opacity);
 }
 
 /* Columns 4-8 — never columns 1-2 (logo/nav) or 3 (kept clear so the
@@ -516,7 +649,7 @@
    fades/slides into place once .process-overlay.is-open is added (see
    project-risk.html's script), instead of just popping in. */
 .process-overlay-text {
-  grid-column: 4 / 9;
+  grid-column: var(--process-text-columns);
   grid-row: 1;
   position: relative;
   z-index: 1;
@@ -524,14 +657,16 @@
   flex-direction: column;
   gap: 1em;
   color: #565656;
-  font-size: 18pt;
+  font-size: var(--process-text-font-size);
   font-family: "ABCROM", sans-serif;
-  line-height: 1.3;
+
+  line-height: 1.2;
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(var(--process-reveal-distance));
   transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
+    opacity var(--process-fade-duration) ease,
+    transform var(--process-fade-duration) ease;
+  padding-bottom: 70px;
 }
 
 .process-overlay.is-open .process-overlay-text {
@@ -539,22 +674,16 @@
   transform: translateY(0);
 }
 
-/* Editorial-style grid of process photos, columns 3-8 only. Nests its own
-   6-column grid (mapped 1:1 to the outer grid's columns 3-8, same fr
-   ratios and gap, so its tracks land on the same pixel boundaries) so each
-   image can be given a fixed, non-overlapping column span below — no
-   randomness, no rotation. padding-left matches .project-images'
-   padding-left so these line up with the project's own images above. */
+/* display:contents unwraps this element entirely — its <img> children
+   become direct items of the SAME grid .process-overlay-text is in
+   (columns 1-8, shared with the rest of the page), instead of a nested
+   sub-grid with its own separate 1-6 numbering. That's what makes the
+   text's and the images' column positions directly comparable: "column
+   4" means the same grid line for both, tweakable from one place
+   (--process-text-columns for the text; each image's own grid-column
+   below, using that identical outer numbering). */
 .process-gallery {
-  grid-column: 3 / 9;
-  grid-row: 2;
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(6, 1.3fr);
-  column-gap: 14px;
-  row-gap: 14px;
-  padding-left: 20px;
+  display: contents;
 }
 
 .process-gallery-img {
@@ -562,10 +691,10 @@
   height: auto;
   display: block;
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(var(--process-reveal-distance));
   transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
+    opacity var(--process-fade-duration) ease,
+    transform var(--process-fade-duration) ease;
 }
 
 .process-overlay.is-open .process-gallery-img {
@@ -573,22 +702,37 @@
   transform: translateY(0);
 }
 
+/* Columns 3-8 only (never 1-2, the logo/nav — same rule as the text
+   above). Two rows of two images each, no rotation. */
 .process-gallery-img:nth-child(1) {
-  grid-column: 1 / span 2;
+  grid-column: 3 / 5;
+  grid-row: 2;
   transition-delay: 0.05s;
 }
 
 .process-gallery-img:nth-child(2) {
-  grid-column: 3 / span 3;
+  grid-column: 5 / 8;
+  grid-row: 2;
   transition-delay: 0.12s;
 }
 
 .process-gallery-img:nth-child(3) {
-  grid-column: 1 / span 3;
+  grid-column: 3 / 6;
+  grid-row: 3;
   transition-delay: 0.19s;
 }
 
 .process-gallery-img:nth-child(4) {
-  grid-column: 4 / span 3;
+  grid-column: 6 / 9;
+  grid-row: 3;
   transition-delay: 0.26s;
+}
+
+/* Process videos read better full-width than at a fixed nth-child photo
+   span — overrides whichever :nth-child rule above would otherwise apply
+   (higher specificity: class + type beats class + pseudo-class). Columns
+   3-8, matching the text/images above instead of spanning into the
+   logo/nav columns. */
+.process-gallery video.process-gallery-img {
+  grid-column: 3 / 9;
 }
