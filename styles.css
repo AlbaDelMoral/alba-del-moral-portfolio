@@ -66,7 +66,7 @@
 /* Set --debug-grid-opacity > 0 (e.g. 0.5) to see the 8-column grid on
    every page; 0 (default) hides it. */
 :root {
-  --debug-grid-opacity: 0.2;
+  --debug-grid-opacity: 0;
 }
 
 .debug-grid {
@@ -457,13 +457,6 @@
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
-}
-
-/* Experiments — filmstrip thumbs sit static (no scroll-driven translate),
-   packed with zero gap, and hover (not wheel/scroll) picks the active
-   photo. See initHoverSlideshow in slideshow.js. */
-.archive-view--experiments .scroll-filmstrip-track {
-  gap: 0;
 }
 
 /* Counter (top) / shot location (bottom) — overlaid on their own copy of

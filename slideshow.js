@@ -46,6 +46,7 @@ function initScrollSlideshow(container, filmstrip) {
     thumbs[current]?.classList.add("active");
     centerThumb(current);
     updateMeta(current);
+    syncVideoPlayback(slides);
   }
 
   // A single trackpad flick fires many wheel events over its whole
@@ -92,6 +93,7 @@ function initScrollSlideshow(container, filmstrip) {
 
   centerThumb(current);
   updateMeta(current);
+  syncVideoPlayback(slides);
   // Listens on the whole document, not just `container` — the slideshow
   // frame only fills part of the viewport, so a listener scoped to it
   // only caught wheel events while the cursor was exactly over the image.
@@ -103,44 +105,6 @@ function initScrollSlideshow(container, filmstrip) {
     document.removeEventListener("keydown", onKeydown);
     thumbs.forEach((thumb, index) =>
       thumb.removeEventListener("click", thumbClickHandlers[index]),
-    );
-  };
-}
-
-// Experiments — filmstrip thumbs are laid out statically (no scroll/translate),
-// and hovering a thumb shows its photo directly, instead of wheel-stepping
-// through them one at a time. The main image frame's position never moves.
-function initHoverSlideshow(container, filmstrip) {
-  const slides = Array.from(container.querySelectorAll(".scroll-slide"));
-  if (slides.length <= 1) return () => {};
-
-  const track = filmstrip
-    ? filmstrip.querySelector(".scroll-filmstrip-track")
-    : null;
-  const thumbs = track
-    ? Array.from(track.querySelectorAll(".scroll-filmstrip-thumb"))
-    : [];
-
-  let current = 0;
-
-  function goTo(index) {
-    if (index < 0 || index >= slides.length || index === current) return;
-    slides[current].classList.remove("active");
-    thumbs[current]?.classList.remove("active");
-    current = index;
-    slides[current].classList.add("active");
-    thumbs[current]?.classList.add("active");
-  }
-
-  const hoverHandlers = thumbs.map((thumb, index) => {
-    const handler = () => goTo(index);
-    thumb.addEventListener("mouseenter", handler);
-    return handler;
-  });
-
-  return () => {
-    thumbs.forEach((thumb, index) =>
-      thumb.removeEventListener("mouseenter", hoverHandlers[index]),
     );
   };
 }
@@ -490,13 +454,8 @@ function initPageEffects(root) {
   const scrollSlideshow = root.querySelector(".scroll-slideshow");
   if (scrollSlideshow) {
     const filmstrip = root.querySelector(".scroll-filmstrip");
-    const isHoverNav = !!root.querySelector(".archive-view--experiments");
     cleanups.push(
-      safeInit(() =>
-        isHoverNav
-          ? initHoverSlideshow(scrollSlideshow, filmstrip)
-          : initScrollSlideshow(scrollSlideshow, filmstrip),
-      ),
+      safeInit(() => initScrollSlideshow(scrollSlideshow, filmstrip)),
     );
   }
 
