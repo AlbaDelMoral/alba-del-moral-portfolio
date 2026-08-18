@@ -33,6 +33,32 @@ function hideLoader() {
   document.getElementById("pageLoader")?.classList.remove("is-visible");
 }
 
+// Images only actually start downloading once they're part of the live
+// document (a detached DOMParser node doesn't fetch them) — so this has
+// to run after the swap, not before it. Resolves once every <img> under
+// `root` has loaded or errored, or after `timeoutMs`, whichever comes
+// first — a safety net so one stuck/failed image can't leave the loader
+// on screen forever.
+function waitForImages(root, timeoutMs = 8000) {
+  const pending = Array.from(root.querySelectorAll("img")).filter(
+    (img) => !img.complete,
+  );
+  if (pending.length === 0) return Promise.resolve();
+
+  return Promise.race([
+    Promise.all(
+      pending.map(
+        (img) =>
+          new Promise((resolve) => {
+            img.addEventListener("load", resolve, { once: true });
+            img.addEventListener("error", resolve, { once: true });
+          }),
+      ),
+    ),
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 function updateActiveNav(pathname) {
   document
     .querySelectorAll(".menu .active")
@@ -84,8 +110,6 @@ async function navigateTo(href, { push }) {
 
   if (push) history.pushState(null, "", href);
 
-  hideLoader();
-
   const applySwap = () => {
     currentCleanup();
     document.title = doc.title;
@@ -101,6 +125,13 @@ async function navigateTo(href, { push }) {
   } else {
     applySwap();
   }
+
+  // The loader (opaque, sitting above #page-content) stays up until the
+  // new page's own images have actually finished loading — hiding it
+  // right after the swap would reveal big/slow images still part
+  // downloaded (visibly cropped/partial) instead of the finished page.
+  await waitForImages(newContent);
+  hideLoader();
 }
 
 function handleClick(event) {
