@@ -33,17 +33,25 @@ function hideLoader() {
   document.getElementById("pageLoader")?.classList.remove("is-visible");
 }
 
-// Downloads every <img> the new page needs into the browser's HTTP cache
-// *before* the swap happens — not after. A detached DOMParser node
-// doesn't fetch its images at all, so this uses plain `new Image()`
-// requests instead (resolved against `baseHref`, since a parsed
-// document's own base URL isn't reliable across browsers). This is what
-// makes the swap (and the reveal animation initPageEffects kicks off
-// as part of it) only happen once everything is actually ready: the
-// <img> elements that land in the live DOM a moment later just paint
-// instantly from cache, instead of trickling in underneath — and behind
-// — an entrance animation that already started. Capped at `timeoutMs` so
-// one stuck/failed image can't leave the loader on screen forever.
+// Downloads AND decodes every <img> the new page needs *before* the swap
+// happens — not after. A detached DOMParser node doesn't fetch its
+// images at all, so this uses plain `new Image()` requests instead
+// (resolved against `baseHref`, since a parsed document's own base URL
+// isn't reliable across browsers).
+//
+// Uses .decode(), not the `load` event: `load` only means the bytes are
+// downloaded, not that the browser has finished turning them into a
+// paintable bitmap — for these multi-MB, 6720x4480 originals, that decode
+// step is slow enough on its own to matter. .decode()'s promise doesn't
+// resolve until decoding is actually done, so it's the real "safe to
+// paint instantly" signal. This is what makes the swap (and the reveal
+// animation initPageEffects kicks off as part of it) only happen once
+// everything is truly ready, instead of the loader hiding while the
+// browser is still mid-decode on the very first paint.
+//
+// Capped at `timeoutMs` so one stuck/failed image can't leave the loader
+// on screen forever; decode() rejects on a failed image, so that's
+// swallowed too instead of stalling the whole batch.
 function preloadImages(root, baseHref, timeoutMs = 15000) {
   const srcs = Array.from(root.querySelectorAll("img"))
     .map((img) => img.getAttribute("src"))
@@ -54,15 +62,11 @@ function preloadImages(root, baseHref, timeoutMs = 15000) {
 
   return Promise.race([
     Promise.all(
-      srcs.map(
-        (src) =>
-          new Promise((resolve) => {
-            const img = new Image();
-            img.addEventListener("load", resolve, { once: true });
-            img.addEventListener("error", resolve, { once: true });
-            img.src = src;
-          }),
-      ),
+      srcs.map((src) => {
+        const img = new Image();
+        img.src = src;
+        return img.decode().catch(() => {});
+      }),
     ),
     new Promise((resolve) => setTimeout(resolve, timeoutMs)),
   ]);
