@@ -7,6 +7,32 @@
 let currentCleanup = () => {};
 let inFlightController = null;
 
+// Shown for a link-driven navigation that's actually taking a moment
+// (fetch + DOM swap), so the visitor sees a loading frame instead of a
+// blank page during that gap. Lives outside #page-content (see
+// .page-loader in styles.css), so it's untouched by the swap itself.
+//
+// scheduleLoader doesn't show it immediately — it waits LOADER_SHOW_DELAY_MS
+// first, so a navigation that finishes before that delay (the common case
+// for local fetches) never flashes the loader at all. hideLoader always
+// cancels that pending timer, so a fast load just never shows it; a slow
+// one shows it and then fades it out (via .page-loader's own opacity
+// transition) the moment the swap is ready — no artificial minimum stay.
+const LOADER_SHOW_DELAY_MS = 150;
+let loaderShowTimer = null;
+
+function scheduleLoader() {
+  clearTimeout(loaderShowTimer);
+  loaderShowTimer = setTimeout(() => {
+    document.getElementById("pageLoader")?.classList.add("is-visible");
+  }, LOADER_SHOW_DELAY_MS);
+}
+
+function hideLoader() {
+  clearTimeout(loaderShowTimer);
+  document.getElementById("pageLoader")?.classList.remove("is-visible");
+}
+
 function updateActiveNav(pathname) {
   document
     .querySelectorAll(".menu .active")
@@ -58,6 +84,8 @@ async function navigateTo(href, { push }) {
 
   if (push) history.pushState(null, "", href);
 
+  hideLoader();
+
   const applySwap = () => {
     currentCleanup();
     document.title = doc.title;
@@ -93,6 +121,7 @@ function handleClick(event) {
   if (url.pathname === window.location.pathname) return;
 
   event.preventDefault();
+  scheduleLoader();
   navigateTo(url.href, { push: true });
 }
 

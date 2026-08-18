@@ -445,7 +445,7 @@ function initPageEffects(root) {
   }
 
   const revealTargets = root.querySelectorAll(
-    ".project-images > img, .project-images > video, .project-images-text, .project-description, .info-image1, .info-image2, .info-content",
+    ".project-images > img, .project-images > video, .project-images-text, .project-description, .info-image1, .info-image2, .info-content, .scroll-slideshow, .scroll-filmstrip, .photo-meta-overlay",
   );
   if (revealTargets.length > 0) {
     cleanups.push(safeInit(() => initScrollReveal(revealTargets)));

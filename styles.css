@@ -141,6 +141,96 @@
   opacity: 1;
 }
 
+/* Page loader — shown by router.js for the span of a link-driven
+   navigation (fetch + DOM swap), so the visitor sees a plain white
+   frame with a small loading animation instead of a blank/broken page
+   for that gap. Same persistent-markup pattern as .menu below: it's
+   part of every page's own HTML (outside #page-content), so router.js
+   never touches it. Sits under .menu's z-index so the nav stays
+   visible/clickable through it. */
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  column-gap: 14px;
+  padding: 20px 15px 20px 30px;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.page-loader.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Wheel of 6 dots, one per --project-color already used for the nav's
+   work items — spinning as a single unit, so each dot keeps its
+   position on the ring (no need to counter-rotate the (symmetric)
+   circles themselves). */
+.page-loader-dots {
+  grid-column: 5;
+  align-self: center;
+  justify-self: center;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  animation: page-loader-spin 2.4s linear infinite;
+}
+
+.page-loader-dots span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  border-radius: 50%;
+  transform: rotate(var(--angle)) translate(14px);
+}
+
+.page-loader-dots span:nth-child(1) {
+  --angle: 0deg;
+  background: #ff6b6b;
+}
+
+.page-loader-dots span:nth-child(2) {
+  --angle: 60deg;
+  background: #8e7cc3;
+}
+
+.page-loader-dots span:nth-child(3) {
+  --angle: 120deg;
+  background: #2ec4b6;
+}
+
+.page-loader-dots span:nth-child(4) {
+  --angle: 180deg;
+  background: #e09f3e;
+}
+
+.page-loader-dots span:nth-child(5) {
+  --angle: 240deg;
+  background: #588157;
+}
+
+.page-loader-dots span:nth-child(6) {
+  --angle: 300deg;
+  background: #e56399;
+}
+
+@keyframes page-loader-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Overlay menu — a single persistent block that's part of every page's
    markup but never gets replaced by router.js's content swap (only
    #page-content is). Genuinely full-viewport now (no more 14vh cap), so
@@ -205,7 +295,7 @@
 
 .menu a {
   text-decoration: none;
-  color: #9f9f9f;
+  color: #565656;
   font-size: 8pt;
   font-family: "ABCROM", sans-serif;
 }
@@ -309,7 +399,7 @@
 
 .nav-work-item-title {
   font-weight: 100; /* Book — the only ABCMarist weight available */
-  color: #9f9f9f;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCMarist", sans-serif;
   letter-spacing: 0.05em;
@@ -318,7 +408,7 @@
 .nav-work-item-subtitle {
   display: none;
   font-weight: 300; /* Light */
-  color: #9f9f9f;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
 }
@@ -348,6 +438,38 @@
 .info-image1.is-visible,
 .info-image2.is-visible,
 .info-content.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Same entrance, for photography/experiments. .scroll-filmstrip gets the
+   usual fade+slide; .scroll-slideshow and .photo-meta-overlay (the
+   counter/location text) are opacity-only, no transform — .scroll-slideshow
+   has a position:fixed descendant (.scroll-slide--max), and any transform
+   on this element — even a resting translateY(0) — would make it that
+   descendant's containing block, trapping its "fill the viewport" sizing
+   inside this frame instead of the real viewport (see the .scroll-slideshow
+   comment). .photo-meta-overlay is just a plain opacity fade, no slide. */
+.scroll-slideshow,
+.photo-meta-overlay {
+  opacity: 0;
+  transition: opacity var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-filmstrip {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+  transition:
+    opacity var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-slideshow.is-visible,
+.photo-meta-overlay.is-visible {
+  opacity: 1;
+}
+
+.scroll-filmstrip.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
@@ -413,7 +535,7 @@
   display: flex;
   flex-direction: column;
   gap: 1em;
-  color: #9f9f9f;
+  color: #565656;
   font-size: 8pt;
   font-family: "ABCROM", sans-serif;
   line-height: 1.6;
@@ -438,7 +560,7 @@
 .archive-content {
   grid-column: 3 / 7;
   padding-top: 120px;
-  color: #9f9f9f;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
   line-height: 1.6;
@@ -636,7 +758,7 @@
 .info-content {
   grid-column: 6 / 9;
   padding-top: 0px;
-  color: #9f9f9f;
+  color: #565656;
   font-size: 14pt;
   font-family: "ABCMarist", sans-serif;
   line-height: 1.2;
@@ -651,7 +773,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
-  color: #9f9f9f;
+  color: #565656;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
   white-space: nowrap;
@@ -681,7 +803,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: #9f9f9f;
+  color: #565656;
   font-family: "ABCMarist", sans-serif;
   font-weight: 100; /* Book — the only ABCMarist weight available */
   font-size: 9pt;
@@ -845,7 +967,7 @@
   display: flex;
   flex-direction: column;
   gap: 1em;
-  color: #9f9f9f;
+  color: #565656;
   font-size: var(--process-text-font-size);
   font-family: "ABCROM", sans-serif;
 
