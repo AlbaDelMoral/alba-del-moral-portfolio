@@ -63,6 +63,27 @@
   --process-overlay-blur: 0px;
 }
 
+/* Set --debug-grid-opacity > 0 (e.g. 0.5) to see the 8-column grid on
+   every page; 0 (default) hides it. */
+:root {
+  --debug-grid-opacity: 0.2;
+}
+
+.debug-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  column-gap: 14px;
+  padding: 20px 15px 20px 30px;
+  pointer-events: none;
+  opacity: var(--debug-grid-opacity, 0);
+}
+
+.debug-grid-col {
+  background: #999;
+}
+
 /* Shared 8-column grid used by .menu and every page's content view
    (.home-view/.archive-view/.info-view/.project-view), all with matching
    padding, so their columns land on identical pixel boundaries. Column 1
@@ -74,7 +95,7 @@
 .project-view,
 .process-overlay {
   display: grid;
-  grid-template-columns: minmax(150px, 1.8fr) 1.5fr repeat(6, 1.3fr);
+  grid-template-columns: repeat(8, 1fr);
   column-gap: 14px;
   padding: 20px 15px 20px 30px;
 }
@@ -94,7 +115,6 @@
   grid-column: 3 / 9;
   display: flex;
   height: 100%;
-  padding-left: 20px;
 }
 
 .slideshow-frame {
@@ -142,6 +162,13 @@
   pointer-events: auto;
 }
 
+/* Purely visual debug aid — must never intercept clicks. Needs to win
+   over .menu > * above (same specificity, but this comes later and is
+   still more specific: .menu > .debug-grid beats .menu > *). */
+.menu > .debug-grid {
+  pointer-events: none;
+}
+
 .logo {
   grid-column: 1;
   position: relative;
@@ -178,7 +205,7 @@
 
 .menu a {
   text-decoration: none;
-  color: #565656;
+  color: #9f9f9f;
   font-size: 8pt;
   font-family: "ABCROM", sans-serif;
 }
@@ -223,10 +250,10 @@
 .nav-work-item.active::before {
   content: "";
   position: absolute;
-  left: -26px;
+  left: -29px;
   top: 50%;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--project-color, #1daeeb);
   transform: translate(-50%, -50%);
@@ -282,7 +309,7 @@
 
 .nav-work-item-title {
   font-weight: 100; /* Book — the only ABCMarist weight available */
-  color: #565656;
+  color: #9f9f9f;
   font-size: 9pt;
   font-family: "ABCMarist", sans-serif;
   letter-spacing: 0.05em;
@@ -291,7 +318,7 @@
 .nav-work-item-subtitle {
   display: none;
   font-weight: 300; /* Light */
-  color: #565656;
+  color: #9f9f9f;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
 }
@@ -386,7 +413,7 @@
   display: flex;
   flex-direction: column;
   gap: 1em;
-  color: #565656;
+  color: #9f9f9f;
   font-size: 8pt;
   font-family: "ABCROM", sans-serif;
   line-height: 1.6;
@@ -411,10 +438,179 @@
 .archive-content {
   grid-column: 3 / 7;
   padding-top: 120px;
-  color: #565656;
+  color: #9f9f9f;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
   line-height: 1.6;
+}
+
+/* Photography — scroll-driven slideshow experiment. The page itself
+   doesn't scroll; wheel input instead advances/retreats through the
+   images, which stay pinned in columns 4-7, vertically centered. */
+.archive-view--photography,
+.archive-view--experiments {
+  height: 100vh;
+  /* border-box so this 100vh is the true, full box (padding included in
+     it, not added on top) — .scroll-slideshow/.scroll-filmstrip below
+     are positioned off of this box directly, ignoring the grid's own
+     top/bottom padding entirely. */
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Experiments — filmstrip thumbs sit static (no scroll-driven translate),
+   packed with zero gap, and hover (not wheel/scroll) picks the active
+   photo. See initHoverSlideshow in slideshow.js. */
+.archive-view--experiments .scroll-filmstrip-track {
+  gap: 0;
+}
+
+/* Counter (top) / shot location (bottom) — overlaid on their own copy of
+   the shared 8-column grid so column 4/7 lines up with the slideshow
+   below, without disturbing the slideshow's own centered row. */
+.photo-meta-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  column-gap: 14px;
+  padding: 20px 15px 20px 30px;
+  pointer-events: none;
+}
+
+.photo-counter,
+.photo-location {
+  grid-column: 4 / 7;
+  text-align: center;
+  color: #9f9f9f;
+  font-size: 9pt;
+  letter-spacing: 0.39em;
+}
+
+.photo-counter {
+  align-self: start;
+  font-family: "ABCMarist", sans-serif;
+}
+
+.photo-location {
+  align-self: end;
+  font-family: "ABCROM", sans-serif;
+  text-transform: uppercase;
+}
+
+/* Absolutely positioned (still grid-column placed — grid areas remain
+   the containing block for a definite axis even when out of flow) so
+   its vertical centering is independent of the grid's own top/bottom
+   padding. Stretched full-height (inset:0) and centers its child via
+   flex, not transform:translateY(-50%) — a transform here would
+   otherwise become the containing block for any position:fixed
+   descendant (i.e. .scroll-slide--max), trapping its "fill the
+   viewport" sizing inside this 3-column frame instead of the real
+   viewport. (margin:auto centering doesn't work here instead of flex
+   because this element's own height is auto — content-derived from
+   .scroll-slideshow-frame's aspect-ratio — and auto margins only
+   distribute to center when height is a definite value.) */
+.scroll-slideshow {
+  grid-column: 4 / 7;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+}
+
+.scroll-slideshow-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+}
+
+.scroll-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* cover would crop portrait photos to fit the landscape frame — contain keeps them their true (vertical) shape */
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.scroll-slide.active {
+  opacity: 1;
+}
+
+/* vertical — same width as a 2-column span (col4 + gap + col5) out of
+   the frame's 3 columns, but now centered horizontally in the frame
+   instead of left-aligned, so it lines up with the counter/location
+   text (also centered on the frame). Height is NOT forced to the
+   frame's 3/2 box: height:auto lets the image keep its own native
+   ratio at that width, so nothing gets cropped or letterboxed.
+   Centered vertically since its height may differ from the frame's. */
+.scroll-slide--vertical {
+  top: 50%;
+  bottom: auto;
+  left: calc((100% + 14px) / 6);
+  right: auto;
+  width: calc((200% - 14px) / 3);
+  height: auto;
+  transform: translateY(-50%);
+}
+
+/* max — breaks out of the 3-column frame entirely to fill the viewport. */
+.scroll-slide--max {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Filmstrip — column 8. A vertical strip of every photo, in the same
+   order as the main slideshow. JS translates .scroll-filmstrip-track so
+   the current photo's thumb always sits at the vertical center (level
+   with the main image); everything above/below fades to low opacity. */
+.scroll-filmstrip {
+  grid-column: 8;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.scroll-filmstrip-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 0 60px 0 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  transition: transform 0.6s ease;
+}
+
+.scroll-filmstrip-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: contain; /* same reasoning as .scroll-slide — keep portrait photos vertical instead of cropping to fill the frame */
+  opacity: 0.3;
+  transition: opacity 0.6s ease;
+  flex-shrink: 0;
+}
+
+.scroll-filmstrip-thumb.active {
+  opacity: 1;
 }
 
 /* Info page — same column convention as the process overlay: content
@@ -447,7 +643,7 @@
 .info-content {
   grid-column: 6 / 9;
   padding-top: 0px;
-  color: #565656;
+  color: #9f9f9f;
   font-size: 14pt;
   font-family: "ABCMarist", sans-serif;
   line-height: 1.2;
@@ -462,7 +658,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
-  color: #565656;
+  color: #9f9f9f;
   font-size: 9pt;
   font-family: "ABCROM", sans-serif;
   white-space: nowrap;
@@ -492,7 +688,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: #565656;
+  color: #9f9f9f;
   font-family: "ABCMarist", sans-serif;
   font-weight: 100; /* Book — the only ABCMarist weight available */
   font-size: 9pt;
@@ -619,7 +815,7 @@
 .process-overlay--fixed-scroll .process-overlay-inner {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(150px, 1.8fr) 1.5fr repeat(6, 1.3fr);
+  grid-template-columns: repeat(8, 1fr);
   column-gap: 4px;
   padding: 20px 15px 20px 30px;
   row-gap: 4px;
@@ -656,7 +852,7 @@
   display: flex;
   flex-direction: column;
   gap: 1em;
-  color: #565656;
+  color: #9f9f9f;
   font-size: var(--process-text-font-size);
   font-family: "ABCROM", sans-serif;
 

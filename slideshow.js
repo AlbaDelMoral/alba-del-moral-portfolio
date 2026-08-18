@@ -1,3 +1,150 @@
+// Scroll-driven slideshow (Archive > photography) — images stay pinned in
+// place; wheel input advances/retreats through them instead of scrolling
+// the page. One step per gesture: a lock blocks further advances until the
+// crossfade finishes, so a single trackpad swipe doesn't skip several. The
+// filmstrip (column 8) rides along: its track is translated so the current
+// thumb is always vertically centered, matching the main image.
+function initScrollSlideshow(container, filmstrip) {
+  const slides = Array.from(container.querySelectorAll(".scroll-slide"));
+  if (slides.length <= 1) return () => {};
+
+  const track = filmstrip
+    ? filmstrip.querySelector(".scroll-filmstrip-track")
+    : null;
+  const thumbs = track
+    ? Array.from(track.querySelectorAll(".scroll-filmstrip-thumb"))
+    : [];
+
+  // Optional counter ("1/7") and shot-location overlays — not every page
+  // using this component has them, so both lookups are null-safe.
+  const archiveView = container.closest(".archive-view");
+  const counterEl = archiveView?.querySelector(".photo-counter") ?? null;
+  const locationEl = archiveView?.querySelector(".photo-location") ?? null;
+
+  let current = 0;
+  let locked = false;
+  let unlockTimer = null;
+
+  function centerThumb(index) {
+    if (!track || !thumbs[index]) return;
+    const thumb = thumbs[index];
+    const targetCenter = thumb.offsetTop + thumb.offsetHeight / 2;
+    track.style.transform = `translateY(${filmstrip.clientHeight / 2 - targetCenter}px)`;
+  }
+
+  function updateMeta(index) {
+    if (counterEl) counterEl.textContent = `${index + 1}/${slides.length}`;
+    if (locationEl) locationEl.textContent = slides[index].dataset.location ?? "";
+  }
+
+  function goTo(index) {
+    if (index < 0 || index >= slides.length || index === current) return;
+    slides[current].classList.remove("active");
+    thumbs[current]?.classList.remove("active");
+    current = index;
+    slides[current].classList.add("active");
+    thumbs[current]?.classList.add("active");
+    centerThumb(current);
+    updateMeta(current);
+  }
+
+  // A single trackpad flick fires many wheel events over its whole
+  // duration, not just one — so "unlock 600ms after the first event"
+  // could still let a second step sneak in on a long/fast flick. Instead
+  // every event while locked pushes the unlock back out, so the lock only
+  // releases once the gesture has actually gone quiet for a beat,
+  // regardless of how long the gesture itself lasted.
+  function onWheel(event) {
+    event.preventDefault();
+    // Trackpads often lead a gesture with one or two near-zero deltaY
+    // events before ramping up. `deltaY > 0 ? 1 : -1` would read one of
+    // those as "up" (since 0 isn't > 0), setting the lock in the wrong
+    // direction and eating the rest of the real gesture — which reads as
+    // the scroll "not being recognized". Ignoring anything below a small
+    // threshold means the lock only ever gets set by a delta that
+    // actually indicates a direction.
+    if (Math.abs(event.deltaY) < 2) return;
+    clearTimeout(unlockTimer);
+    unlockTimer = setTimeout(() => {
+      locked = false;
+    }, 130);
+    if (locked) return;
+    locked = true;
+    goTo(current + (event.deltaY > 0 ? 1 : -1));
+  }
+
+  // Up/down arrow keys step through the same as one wheel notch.
+  function onKeydown(event) {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    goTo(current + (event.key === "ArrowDown" ? 1 : -1));
+  }
+
+  // Clicking a thumbnail jumps straight to that photo instead of
+  // scrolling one by one.
+  const onThumbClick = (index) => () => goTo(index);
+  const thumbClickHandlers = thumbs.map((thumb, index) => {
+    const handler = onThumbClick(index);
+    thumb.style.cursor = "pointer";
+    thumb.addEventListener("click", handler);
+    return handler;
+  });
+
+  centerThumb(current);
+  updateMeta(current);
+  // Listens on the whole document, not just `container` — the slideshow
+  // frame only fills part of the viewport, so a listener scoped to it
+  // only caught wheel events while the cursor was exactly over the image.
+  document.addEventListener("wheel", onWheel, { passive: false });
+  document.addEventListener("keydown", onKeydown);
+  return () => {
+    clearTimeout(unlockTimer);
+    document.removeEventListener("wheel", onWheel);
+    document.removeEventListener("keydown", onKeydown);
+    thumbs.forEach((thumb, index) =>
+      thumb.removeEventListener("click", thumbClickHandlers[index]),
+    );
+  };
+}
+
+// Experiments — filmstrip thumbs are laid out statically (no scroll/translate),
+// and hovering a thumb shows its photo directly, instead of wheel-stepping
+// through them one at a time. The main image frame's position never moves.
+function initHoverSlideshow(container, filmstrip) {
+  const slides = Array.from(container.querySelectorAll(".scroll-slide"));
+  if (slides.length <= 1) return () => {};
+
+  const track = filmstrip
+    ? filmstrip.querySelector(".scroll-filmstrip-track")
+    : null;
+  const thumbs = track
+    ? Array.from(track.querySelectorAll(".scroll-filmstrip-thumb"))
+    : [];
+
+  let current = 0;
+
+  function goTo(index) {
+    if (index < 0 || index >= slides.length || index === current) return;
+    slides[current].classList.remove("active");
+    thumbs[current]?.classList.remove("active");
+    current = index;
+    slides[current].classList.add("active");
+    thumbs[current]?.classList.add("active");
+  }
+
+  const hoverHandlers = thumbs.map((thumb, index) => {
+    const handler = () => goTo(index);
+    thumb.addEventListener("mouseenter", handler);
+    return handler;
+  });
+
+  return () => {
+    thumbs.forEach((thumb, index) =>
+      thumb.removeEventListener("mouseenter", hoverHandlers[index]),
+    );
+  };
+}
+
 function readCssVar(el, name, fallback) {
   // getComputedStyle resolves the cascade for this specific element, so
   // a slideshow container that locally overrides --slide-interval (e.g.
@@ -285,11 +432,29 @@ function safeInit(fn) {
 // function that undoes all of it — router.js calls this cleanup right
 // before the next swap so intervals/observers/listeners never pile up
 // on detached DOM from earlier page visits.
+// Injects the 8 .debug-grid-col bars into .menu once — hidden by default
+// via --debug-grid-opacity (see styles.css). .menu is never replaced by
+// router.js, so this only needs to run once; the check makes repeat calls
+// a no-op instead of duplicating it.
+function initDebugGrid() {
+  const menu = document.querySelector(".menu");
+  if (!menu || menu.querySelector(".debug-grid")) return;
+  const grid = document.createElement("div");
+  grid.className = "debug-grid";
+  for (let i = 0; i < 8; i++) {
+    grid.appendChild(document.createElement("div")).className =
+      "debug-grid-col";
+  }
+  menu.prepend(grid);
+}
+
 function initPageEffects(root) {
   // Belt-and-suspenders: guarantee every fresh page starts fully
   // scrollable, even if a previous page's cleanup was somehow skipped.
   document.documentElement.classList.remove("process-overlay-scroll-lock");
   document.body.classList.remove("process-overlay-scroll-lock");
+
+  safeInit(initDebugGrid);
 
   const cleanups = [];
 
@@ -320,6 +485,19 @@ function initPageEffects(root) {
   );
   if (revealTargets.length > 0) {
     cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
+  }
+
+  const scrollSlideshow = root.querySelector(".scroll-slideshow");
+  if (scrollSlideshow) {
+    const filmstrip = root.querySelector(".scroll-filmstrip");
+    const isHoverNav = !!root.querySelector(".archive-view--experiments");
+    cleanups.push(
+      safeInit(() =>
+        isHoverNav
+          ? initHoverSlideshow(scrollSlideshow, filmstrip)
+          : initScrollSlideshow(scrollSlideshow, filmstrip),
+      ),
+    );
   }
 
   cleanups.push(safeInit(() => initProcessOverlay(root)));
