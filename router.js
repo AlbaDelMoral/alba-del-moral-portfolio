@@ -33,25 +33,34 @@ function hideLoader() {
   document.getElementById("pageLoader")?.classList.remove("is-visible");
 }
 
-// Images only actually start downloading once they're part of the live
-// document (a detached DOMParser node doesn't fetch them) — so this has
-// to run after the swap, not before it. Resolves once every <img> under
-// `root` has loaded or errored, or after `timeoutMs`, whichever comes
-// first — a safety net so one stuck/failed image can't leave the loader
-// on screen forever.
-function waitForImages(root, timeoutMs = 8000) {
-  const pending = Array.from(root.querySelectorAll("img")).filter(
-    (img) => !img.complete,
-  );
-  if (pending.length === 0) return Promise.resolve();
+// Downloads every <img> the new page needs into the browser's HTTP cache
+// *before* the swap happens — not after. A detached DOMParser node
+// doesn't fetch its images at all, so this uses plain `new Image()`
+// requests instead (resolved against `baseHref`, since a parsed
+// document's own base URL isn't reliable across browsers). This is what
+// makes the swap (and the reveal animation initPageEffects kicks off
+// as part of it) only happen once everything is actually ready: the
+// <img> elements that land in the live DOM a moment later just paint
+// instantly from cache, instead of trickling in underneath — and behind
+// — an entrance animation that already started. Capped at `timeoutMs` so
+// one stuck/failed image can't leave the loader on screen forever.
+function preloadImages(root, baseHref, timeoutMs = 15000) {
+  const srcs = Array.from(root.querySelectorAll("img"))
+    .map((img) => img.getAttribute("src"))
+    .filter(Boolean)
+    .map((src) => new URL(src, baseHref).href);
+
+  if (srcs.length === 0) return Promise.resolve();
 
   return Promise.race([
     Promise.all(
-      pending.map(
-        (img) =>
+      srcs.map(
+        (src) =>
           new Promise((resolve) => {
+            const img = new Image();
             img.addEventListener("load", resolve, { once: true });
             img.addEventListener("error", resolve, { once: true });
+            img.src = src;
           }),
       ),
     ),
@@ -110,6 +119,15 @@ async function navigateTo(href, { push }) {
 
   if (push) history.pushState(null, "", href);
 
+  // Wait for the new page's images before swapping at all — see
+  // preloadImages above for why this has to happen before, not after.
+  await preloadImages(newContent, href);
+
+  // A newer navigation may have started (and aborted this one's fetch)
+  // while that preload was in flight; bail instead of swapping in now
+  // out-of-date content.
+  if (controller.signal.aborted) return;
+
   const applySwap = () => {
     currentCleanup();
     document.title = doc.title;
@@ -126,11 +144,6 @@ async function navigateTo(href, { push }) {
     applySwap();
   }
 
-  // The loader (opaque, sitting above #page-content) stays up until the
-  // new page's own images have actually finished loading — hiding it
-  // right after the swap would reveal big/slow images still part
-  // downloaded (visibly cropped/partial) instead of the finished page.
-  await waitForImages(newContent);
   hideLoader();
 }
 
