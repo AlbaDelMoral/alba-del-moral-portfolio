@@ -305,6 +305,18 @@
   font-family: "ABCROM", sans-serif;
 }
 
+/* Same instant-press feedback as .nav-work-item, for the logo link and
+   any other plain .menu link (.nav-work-item overrides this itself
+   above with its own :active rule). */
+.menu a:active {
+  opacity: 0.5;
+}
+
+.mobile-nav-toggle:active,
+.process-toggle:active {
+  opacity: 0.5;
+}
+
 .nav-link {
   font-weight: 700; /* Bold — same weight as the logo */
   text-transform: uppercase;
@@ -354,9 +366,17 @@
   transform: translate(-50%, -50%);
 }
 
-.nav-work-item:visited,
-.nav-work-item:active {
+.nav-work-item:visited {
   color: inherit;
+}
+
+/* Instant feedback the moment a link is pressed — :active fires on
+   press/touchstart, not on release, so (unlike :hover) it works fine on
+   touch without any double-tap issue. Replaces the plain
+   -webkit-tap-highlight-color box removed in base.css with something
+   intentional instead of just "nothing happens until the page loads". */
+.nav-work-item:active {
+  opacity: 0.5;
 }
 
 /* (hover: hover) guards every :hover rule on .nav-work-item below —
@@ -886,6 +906,7 @@
 .process-overlay--fixed-scroll {
   position: fixed;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   /* Without this, scrolling past this element's own top/bottom edge
      "chains" into scrolling the page underneath instead of just stopping
      — this is what was still moving the project page after reaching the
@@ -1090,9 +1111,7 @@
   /* Slower/longer entrance for project images on mobile — with images
      stacked full-width, more of them are on screen at once than on
      desktop's multi-column layout, so a quicker/subtler reveal there
-     reads as more abrupt here. scroll-behavior:smooth is for the same
-     "smoother, less jumpy" feel generally (e.g. the process overlay
-     resetting its own scroll position on open). */
+     reads as more abrupt here. */
   :root {
     --reveal-duration: 2.2s;
     --reveal-distance: 32px;
@@ -1102,10 +1121,6 @@
        and end up looking like it never animated at all for exactly the
        images that don't require scrolling to trigger it. */
     --reveal-delay: 500;
-  }
-
-  html {
-    scroll-behavior: smooth;
   }
 
   .mobile-nav-bar {
@@ -1164,6 +1179,7 @@
     background: #fff;
     padding: 20px 15px 30px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     animation: mobile-nav-in 0.3s ease;
   }
 

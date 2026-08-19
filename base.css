@@ -54,6 +54,10 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* The default gray flash mobile browsers paint behind a tapped link —
+     replaced with deliberate :active states on the actual clickable
+     elements (see styles.css) instead of the browser's own generic box. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Full page */

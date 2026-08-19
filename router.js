@@ -18,7 +18,11 @@ let inFlightController = null;
 // cancels that pending timer, so a fast load just never shows it; a slow
 // one shows it and then fades it out (via .page-loader's own opacity
 // transition) the moment the swap is ready — no artificial minimum stay.
-const LOADER_SHOW_DELAY_MS = 150;
+// Kept short (not 0) so it still doesn't flash on truly instant loads, but
+// short enough that a slower mobile connection sees *some* response
+// quickly — the tapped link's own :active state (see styles.css) covers
+// the instant, pre-100ms feedback the loader itself can't.
+const LOADER_SHOW_DELAY_MS = 80;
 let loaderShowTimer = null;
 
 function scheduleLoader() {
