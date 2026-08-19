@@ -272,6 +272,46 @@ function initHoverCaption(caption, trigger) {
   };
 }
 
+// Mobile nav toggle — same persistent-markup situation as the process
+// toggle below: .mobile-nav-toggle lives in .menu, which router.js never
+// replaces, so this looks it up on `document` (not `root`) and re-runs
+// on every navigation, resetting to closed each time. Without that
+// reset, following a link from inside the open overlay would carry
+// "open" into whatever page loads next, since the toggle/menu elements
+// themselves never get re-created.
+function initMobileNav() {
+  const toggle = document.getElementById("mobileNavToggle");
+  const menu = document.querySelector(".menu");
+  if (!toggle || !menu) return () => {};
+
+  menu.classList.remove("is-nav-open");
+  toggle.setAttribute("aria-expanded", "false");
+  // Belt-and-suspenders, same as initProcessOverlay below — guarantees a
+  // fresh page never inherits a stale lock from a skipped cleanup.
+  document.documentElement.classList.remove("process-overlay-scroll-lock");
+  document.body.classList.remove("process-overlay-scroll-lock");
+
+  const setLocked = (isLocked) => {
+    document.documentElement.classList.toggle(
+      "process-overlay-scroll-lock",
+      isLocked,
+    );
+    document.body.classList.toggle("process-overlay-scroll-lock", isLocked);
+  };
+
+  const onToggleClick = () => {
+    const isOpen = menu.classList.toggle("is-nav-open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    setLocked(isOpen);
+  };
+
+  toggle.addEventListener("click", onToggleClick);
+  return () => {
+    toggle.removeEventListener("click", onToggleClick);
+    setLocked(false);
+  };
+}
+
 // The "Look at info and process" button lives in .menu, which router.js
 // never replaces — only #page-content is swapped. So this has to be
 // re-run after every navigation (initPageEffects already does that) and
@@ -459,6 +499,7 @@ function initPageEffects(root) {
     );
   }
 
+  cleanups.push(safeInit(initMobileNav));
   cleanups.push(safeInit(() => initProcessOverlay(root)));
 
   return () => cleanups.forEach((cleanup) => cleanup());

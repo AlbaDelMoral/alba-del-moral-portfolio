@@ -1047,3 +1047,143 @@
 .process-gallery video.process-gallery-img {
   grid-column: 3 / 9;
 }
+
+/* ── Mobile nav ──────────────────────────────────────────────────────────
+   Hidden entirely above the breakpoint (desktop keeps the always-open
+   .nav-column exactly as-is). Below it: .menu becomes a 2-column,
+   2-row grid — logo (col 1) and the dots toggle (col 2) form a header
+   row that's always visible, open or closed, so the same toggle button
+   both opens the overlay and — since it never gets covered by it, unlike
+   an earlier version of this — closes it again too. Opening just reveals
+   .nav-column in row 2, below that header, left-aligned under the logo
+   rather than desktop's column-2 position. */
+.mobile-nav-toggle {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .menu {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto 1fr;
+    padding-left: 15px;
+  }
+
+  /* Opaque background behind the header row (logo + toggle) only — as a
+     generated box placed in that same grid row, it stretches to match
+     the row's own auto height automatically, and paints behind
+     .logo/.mobile-nav-toggle since (as a ::before) it's earlier in the
+     box tree than either. Without this, page content scrolling past
+     underneath (.menu's own background is transparent) would show
+     through around the logo/dots as the page scrolls. The grid row
+     itself only spans .menu's padded content area, so a negative
+     margin (matching .menu's own top/left/right padding) pulls the box
+     out to the true top/left/right edges of the viewport — otherwise
+     there'd be a 20px gap above it (and side gaps) still showing
+     scrolled content through. padding-bottom extends it a little past
+     the row's own natural (content-height) bottom edge. */
+  .menu::before {
+    content: "";
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin: -20px -15px 0 -15px;
+    padding-bottom: 10px;
+    background: #fff;
+  }
+
+  .logo {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .mobile-nav-toggle {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+    position: relative;
+    z-index: 2;
+    gap: 4px;
+    padding: 10px;
+    margin: -10px -10px 0 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .mobile-nav-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  .mobile-nav-dot:nth-child(1) {
+    background: #ff6b6b;
+  }
+
+  .mobile-nav-dot:nth-child(2) {
+    background: #8e7cc3;
+  }
+
+  .mobile-nav-dot:nth-child(3) {
+    background: #2ec4b6;
+  }
+
+  .nav-column {
+    display: none;
+  }
+
+  /* Same edge-to-edge trick as .menu::before: the grid row only spans
+     .menu's padded content area, so negative left/right margins (matching
+     .menu's own padding) pull the overlay's white background out to the
+     true edges of the viewport instead of leaving a 15px sliver of
+     scrolled content visible on each side. padding puts that inset back
+     for the actual nav content/text. */
+  .menu.is-nav-open .nav-column {
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    margin: 20px -15px 0 -15px;
+    padding: 0 15px 30px;
+    overflow-y: auto;
+    animation: mobile-nav-in 0.3s ease;
+  }
+
+  /* Project photos go full-bleed instead of desktop's narrower column
+     3/9 span, matching the header's own 2-column-wide layout. */
+  .project-images {
+    grid-column: 1 / -1;
+  }
+
+  /* Pushes page content down clear of the logo/toggle row. Also equalizes
+     the left/right padding (desktop's 30px/15px asymmetry existed to
+     balance the side-by-side logo/nav columns, which no longer apply
+     once the nav becomes a top bar). */
+  .home-view,
+  .archive-view,
+  .info-view,
+  .project-view {
+    padding-top: 90px;
+    padding-left: 15px;
+  }
+
+  /* Bigger than desktop's 9pt — .nav-work-item-title is shared by both
+     the Works and Archive lists, so this covers both at once. */
+  .menu.is-nav-open .nav-work-item-title {
+    font-size: 15pt;
+  }
+}
+
+@keyframes mobile-nav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
