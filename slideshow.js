@@ -209,9 +209,15 @@ function initScrollReveal(elements) {
     // big image still decoding right after a page navigation) — long
     // enough that above-the-fold content can sit invisible for a
     // noticeable beat. Elements already in view when we land on the page
-    // skip that uncertainty entirely and reveal immediately.
+    // skip that uncertainty entirely instead of waiting on the observer —
+    // but reveal after --reveal-delay (0 on desktop), not instantly:
+    // on mobile especially, this fires right as the new page's content is
+    // still settling in, so an instant class-add can coincide with (and
+    // get swallowed by) that same repaint, making the entrance look like
+    // it never played at all rather than an actual fade/slide-in.
     if (isSufficientlyVisible(el)) {
-      el.classList.add("is-visible");
+      const delay = readCssVar(el, "--reveal-delay", 0);
+      setTimeout(() => el.classList.add("is-visible"), delay);
       return;
     }
     pending.add(el);
@@ -269,6 +275,47 @@ function initHoverCaption(caption, trigger) {
     trigger.removeEventListener("mouseenter", onEnter);
     trigger.removeEventListener("mousemove", onMove);
     trigger.removeEventListener("mouseleave", onLeave);
+  };
+}
+
+// Project pages' background videos (autoplay, muted, no audio track).
+// Chrome's power-saving policy actively pauses "video-only" autoplaying
+// media it considers backgrounded — confirmed via the exact rejection:
+// `AbortError: ... paused to save power`. That's separate from the usual
+// autoplay-permission story (muted+autoplay is otherwise honored fine)
+// and isn't a one-time thing to just retry harder up front: it can fire
+// any time the tab loses/regains focus. So this keeps trying — once on
+// init, again whenever the tab becomes visible, and again whenever a
+// video actually scrolls into view (the two situations Chrome's policy
+// cares about) — rather than a single attempt that silently gives up.
+function initAutoplayVideos(root) {
+  const videos = Array.from(
+    root.querySelectorAll(".project-images video[autoplay]"),
+  );
+  if (videos.length === 0) return () => {};
+
+  const tryPlay = (video) => {
+    video.muted = true;
+    if (video.paused) video.play().catch(() => {});
+  };
+
+  videos.forEach(tryPlay);
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") videos.forEach(tryPlay);
+  };
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) tryPlay(entry.target);
+    });
+  });
+  videos.forEach((video) => observer.observe(video));
+
+  return () => {
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    observer.disconnect();
   };
 }
 
@@ -477,19 +524,7 @@ function initPageEffects(root) {
     video.playbackRate = parseFloat(video.dataset.playbackRate);
   });
 
-  // Belt-and-suspenders for the project pages' background videos: the
-  // `autoplay` attribute alone is sometimes silently ignored by mobile
-  // browsers (showing a play button instead) even though `muted` is
-  // already set in the markup — some only honor it reliably when it's
-  // also set as a JS property before playback is requested. Explicitly
-  // muting + calling play() here covers that case; .catch is required
-  // since play() returns a rejected promise if autoplay ends up blocked
-  // anyway (e.g. iOS Low Power Mode), which would otherwise surface as
-  // an unhandled promise rejection in the console for no benefit.
-  root.querySelectorAll(".project-images video[autoplay]").forEach((video) => {
-    video.muted = true;
-    video.play().catch(() => {});
-  });
+  cleanups.push(safeInit(() => initAutoplayVideos(root)));
 
   root.querySelectorAll(".slideshow").forEach((container) => {
     const intervalMs = readCssVar(container, "--slide-interval", 8000);

@@ -24,6 +24,10 @@
    --menu-opacity         opacity of the menu bar's white background (0–1).
    --reveal-duration      length of each project's slide-up/fade-in.
    --reveal-distance      how far (px) the project slides up from.
+   --reveal-delay         ms to wait before revealing already-visible
+                           content (read by slideshow.js), so the
+                           entrance doesn't fire while the page is still
+                           settling in right after navigation.
    ─────────────────────────────────────────────────────────────────────── */
 :root {
   --fade-duration: 1.2s;
@@ -33,6 +37,7 @@
   --menu-opacity: 1;
   --reveal-duration: 1.6s;
   --reveal-distance: 20px;
+  --reveal-delay: 0;
 }
 
 /* ── PROCESS OVERLAY CONFIG — tweak these to change the look/feel ──────────
@@ -1091,6 +1096,12 @@
   :root {
     --reveal-duration: 2.2s;
     --reveal-distance: 32px;
+    /* Above-the-fold content (no scroll needed to see it) reveals as
+       soon as the page settles rather than instantly on navigation —
+       without this, the entrance can race the page's own load/layout
+       and end up looking like it never animated at all for exactly the
+       images that don't require scrolling to trigger it. */
+    --reveal-delay: 500;
   }
 
   html {
@@ -1156,10 +1167,84 @@
     animation: mobile-nav-in 0.3s ease;
   }
 
-  /* Project photos go full-bleed instead of desktop's narrower column
-     3/9 span, matching the header's own 2-column-wide layout. */
-  .project-images {
+  /* Project photos and the home page slideshow go full-bleed instead of
+     desktop's narrower column 3/9 span, matching the header's own
+     2-column-wide layout. Without this, .container stays squeezed into
+     the same 6-of-8 columns sized for desktop's logo+nav side columns,
+     which don't visually exist anymore on mobile — the slideshow frame
+     ends up cropped/overflowing off the right edge of the screen. */
+  .project-images,
+  .container {
     grid-column: 1 / -1;
+  }
+
+  /* Photography/experiments counter+location text — desktop centers it
+     within columns 4/7 of the 8-column grid, which on a narrow mobile
+     screen lands off-center in a cramped, arbitrary-looking slice. Also
+     the counter (top, align-self:start) was starting right at the true
+     viewport top, hidden behind the fixed .mobile-nav-bar header —
+     padding-top clears it the same way page content does elsewhere. */
+  .photo-meta-overlay {
+    grid-template-columns: 1fr;
+    padding: calc(var(--mobile-nav-bar-height, 90px) + 20px) 15px 30px;
+  }
+
+  .photo-counter,
+  .photo-location {
+    grid-column: 1;
+  }
+
+  /* The main slideshow image was squeezed into desktop's 3-of-8-column
+     span (grid-column:4/7), which on a narrow screen renders as a tiny
+     image floating in mostly-empty space instead of filling the screen.
+     Full-bleed here, same reasoning as .project-images/.container above.
+     The filmstrip (desktop's thumbnail rail, grid-column:8) has no room
+     to work as a visual thumbnail strip at this width, so it's hidden —
+     wheel/keyboard/swipe navigation through initScrollSlideshow still
+     works fine without it. */
+  .scroll-slideshow {
+    grid-column: 1 / -1;
+  }
+
+  .scroll-filmstrip {
+    display: none;
+  }
+
+  /* Info page — desktop places the bio text and two images side by side
+     in narrow column slices (3/6, 6/7, 6/9); stack them full-width
+     instead, in the same order they're already in the markup (bio text,
+     then both images). padding-top:100px on image1 existed to visually
+     align it next to the text in that side-by-side layout — not needed
+     once everything's stacked. */
+  .info-image1,
+  .info-image2,
+  .info-content {
+    grid-column: 1 / -1;
+  }
+
+  .info-image1 {
+    padding-top: 0;
+  }
+
+  /* Process overlay (the "Look at info and process" panel) — desktop
+     confines the text to a narrow column slice (--process-text-columns,
+     4/9 by default) and packs the gallery into tight 2-3-column images;
+     both go full-width/wider on mobile so the text isn't indented into
+     empty space and the gallery photos aren't tiny. Keeps the existing
+     2-up pairing (img 1+2 one row, img 3+4 the next) just spanning the
+     full 8 columns evenly instead of being squeezed into columns 3-9. */
+  :root {
+    --process-text-columns: 1 / -1;
+  }
+
+  .process-gallery-img:nth-child(1),
+  .process-gallery-img:nth-child(3) {
+    grid-column: 1 / 5;
+  }
+
+  .process-gallery-img:nth-child(2),
+  .process-gallery-img:nth-child(4) {
+    grid-column: 5 / 9;
   }
 
   /* Pushes page content down clear of the fixed header. Also equalizes
