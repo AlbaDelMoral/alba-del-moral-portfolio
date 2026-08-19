@@ -287,7 +287,7 @@
    line) instead of "ALBA" (its first). */
 .nav-column {
   grid-column: 2;
-  margin-top: calc(9pt * 1.45);
+  margin-top: -10px;
   display: flex;
   flex-direction: column;
   padding-right: 10px;
@@ -1050,62 +1050,43 @@
 
 /* ── Mobile nav ──────────────────────────────────────────────────────────
    Hidden entirely above the breakpoint (desktop keeps the always-open
-   .nav-column exactly as-is). Below it: .menu becomes a 2-column,
-   2-row grid — logo (col 1) and the dots toggle (col 2) form a header
-   row that's always visible, open or closed, so the same toggle button
-   both opens the overlay and — since it never gets covered by it, unlike
-   an earlier version of this — closes it again too. Opening just reveals
-   .nav-column in row 2, below that header, left-aligned under the logo
-   rather than desktop's column-2 position. */
+   .nav-column exactly as-is, and .mobile-nav-bar's display:contents makes
+   it a no-op wrapper there — .logo/.mobile-nav-toggle still participate
+   directly in .menu's own grid as if it wasn't there).
+   Below the breakpoint: .mobile-nav-bar becomes a real, self-contained
+   position:fixed div — a genuine two-column header (logo | dots toggle)
+   pinned to the top of the viewport, independent of .menu's grid, so its
+   height is just whatever its own content needs (no more fragile
+   grid-row/pseudo-element height-matching). initMobileNav() measures its
+   rendered height and writes it to --mobile-nav-bar-height so
+   .nav-column knows where to start when open. */
+.mobile-nav-bar {
+  display: contents;
+}
+
 .mobile-nav-toggle {
   display: none;
 }
 
-@media (max-width: 700px) {
-  .menu {
+@media (max-width: 1100px) {
+  .mobile-nav-bar {
+    display: grid;
     grid-template-columns: 1fr auto;
-    grid-template-rows: auto 1fr;
-    padding-left: 15px;
-  }
-
-  /* Opaque background behind the header row (logo + toggle) only — as a
-     generated box placed in that same grid row, it stretches to match
-     the row's own auto height automatically, and paints behind
-     .logo/.mobile-nav-toggle since (as a ::before) it's earlier in the
-     box tree than either. Without this, page content scrolling past
-     underneath (.menu's own background is transparent) would show
-     through around the logo/dots as the page scrolls. The grid row
-     itself only spans .menu's padded content area, so a negative
-     margin (matching .menu's own top/left/right padding) pulls the box
-     out to the true top/left/right edges of the viewport — otherwise
-     there'd be a 20px gap above it (and side gaps) still showing
-     scrolled content through. padding-bottom extends it a little past
-     the row's own natural (content-height) bottom edge. */
-  .menu::before {
-    content: "";
-    grid-column: 1 / -1;
-    grid-row: 1;
-    margin: -20px -15px 0 -15px;
-    padding-bottom: 10px;
+    align-items: start;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 101;
     background: #fff;
-  }
-
-  .logo {
-    grid-column: 1;
-    grid-row: 1;
+    padding: 20px 15px 15px;
   }
 
   .mobile-nav-toggle {
     display: flex;
-    grid-column: 2;
-    grid-row: 1;
     justify-self: end;
-    align-self: start;
-    position: relative;
-    z-index: 2;
     gap: 4px;
     padding: 10px;
-    margin: -10px -10px 0 0;
     background: none;
     border: none;
     cursor: pointer;
@@ -1133,21 +1114,16 @@
     display: none;
   }
 
-  /* Same edge-to-edge trick as .menu::before: the grid row only spans
-     .menu's padded content area, so negative left/right margins (matching
-     .menu's own padding) pull the overlay's white background out to the
-     true edges of the viewport instead of leaving a 15px sliver of
-     scrolled content visible on each side. padding puts that inset back
-     for the actual nav content/text. */
   .menu.is-nav-open .nav-column {
     display: flex;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    position: relative;
-    z-index: 1;
+    position: fixed;
+    top: var(--mobile-nav-bar-height, 90px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
     background: #fff;
-    margin: 20px -15px 0 -15px;
-    padding: 0 15px 30px;
+    padding: 20px 15px 30px;
     overflow-y: auto;
     animation: mobile-nav-in 0.3s ease;
   }
@@ -1158,7 +1134,7 @@
     grid-column: 1 / -1;
   }
 
-  /* Pushes page content down clear of the logo/toggle row. Also equalizes
+  /* Pushes page content down clear of the fixed header. Also equalizes
      the left/right padding (desktop's 30px/15px asymmetry existed to
      balance the side-by-side logo/nav columns, which no longer apply
      once the nav becomes a top bar). */
@@ -1166,7 +1142,7 @@
   .archive-view,
   .info-view,
   .project-view {
-    padding-top: 90px;
+    padding-top: 130px;
     padding-left: 15px;
   }
 

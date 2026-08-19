@@ -282,10 +282,21 @@ function initHoverCaption(caption, trigger) {
 function initMobileNav() {
   const toggle = document.getElementById("mobileNavToggle");
   const menu = document.querySelector(".menu");
+  const bar = document.querySelector(".mobile-nav-bar");
   if (!toggle || !menu) return () => {};
 
   menu.classList.remove("is-nav-open");
   toggle.setAttribute("aria-expanded", "false");
+  // .mobile-nav-bar is position:fixed on mobile (see styles.css), so
+  // .nav-column (also fixed, when open) needs its real rendered height
+  // to know where to start below it — this is only reachable at runtime,
+  // not something a CSS-only value could express reliably.
+  if (bar) {
+    document.documentElement.style.setProperty(
+      "--mobile-nav-bar-height",
+      `${bar.getBoundingClientRect().height}px`,
+    );
+  }
   // Belt-and-suspenders, same as initProcessOverlay below — guarantees a
   // fresh page never inherits a stale lock from a skipped cleanup.
   document.documentElement.classList.remove("process-overlay-scroll-lock");
