@@ -354,9 +354,17 @@
   color: inherit;
 }
 
-.nav-work-item:hover .nav-work-item-title,
-.nav-work-item:hover .nav-work-item-subtitle {
-  color: var(--project-color, #1daeeb);
+/* (hover: hover) guards every :hover rule on .nav-work-item below —
+   without it, a touchscreen tap on these <a> links registers as
+   "entering" the hover state first, and needs a *second* tap to actually
+   follow the link (the classic iOS/Android double-tap-required bug for
+   any link whose :hover changes something visible). Real pointer/mouse
+   devices are unaffected. */
+@media (hover: hover) and (pointer: fine) {
+  .nav-work-item:hover .nav-work-item-title,
+  .nav-work-item:hover .nav-work-item-subtitle {
+    color: var(--project-color, #1daeeb);
+  }
 }
 
 .nav-work-item.active .nav-work-item-title,
@@ -392,9 +400,12 @@
    color turning blue) instead of staying a washed-out "low-opacity
    blue". !important because the dimming rules above out-specificity a
    plain :hover selector (their :has() arguments count toward
-   specificity). */
-.nav-work-item:hover {
-  opacity: 1 !important;
+   specificity). (hover: hover)-guarded for the same double-tap reason as
+   above. */
+@media (hover: hover) and (pointer: fine) {
+  .nav-work-item:hover {
+    opacity: 1 !important;
+  }
 }
 
 .nav-work-item-title {
@@ -813,8 +824,10 @@
   cursor: pointer;
 }
 
-.process-toggle:hover {
-  opacity: 0.6;
+@media (hover: hover) and (pointer: fine) {
+  .process-toggle:hover {
+    opacity: 0.6;
+  }
 }
 
 /* The button lives in the persistent .menu, which router.js never
@@ -1069,6 +1082,21 @@
 }
 
 @media (max-width: 1100px) {
+  /* Slower/longer entrance for project images on mobile — with images
+     stacked full-width, more of them are on screen at once than on
+     desktop's multi-column layout, so a quicker/subtler reveal there
+     reads as more abrupt here. scroll-behavior:smooth is for the same
+     "smoother, less jumpy" feel generally (e.g. the process overlay
+     resetting its own scroll position on open). */
+  :root {
+    --reveal-duration: 2.2s;
+    --reveal-distance: 32px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   .mobile-nav-bar {
     display: grid;
     grid-template-columns: 1fr auto;

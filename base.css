@@ -63,4 +63,10 @@ body {
   min-height: 100%;
   overflow-x: hidden;
   font-family: "ABCROM", sans-serif;
+  /* Without this, mobile Safari (and some Android browsers) silently
+     inflate text size on rotation to landscape — most noticeable on the
+     logo, since it's the biggest/boldest text on screen. This disables
+     that auto-adjustment so text stays the size the CSS actually says. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }

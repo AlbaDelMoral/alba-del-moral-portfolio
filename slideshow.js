@@ -477,6 +477,20 @@ function initPageEffects(root) {
     video.playbackRate = parseFloat(video.dataset.playbackRate);
   });
 
+  // Belt-and-suspenders for the project pages' background videos: the
+  // `autoplay` attribute alone is sometimes silently ignored by mobile
+  // browsers (showing a play button instead) even though `muted` is
+  // already set in the markup — some only honor it reliably when it's
+  // also set as a JS property before playback is requested. Explicitly
+  // muting + calling play() here covers that case; .catch is required
+  // since play() returns a rejected promise if autoplay ends up blocked
+  // anyway (e.g. iOS Low Power Mode), which would otherwise surface as
+  // an unhandled promise rejection in the console for no benefit.
+  root.querySelectorAll(".project-images video[autoplay]").forEach((video) => {
+    video.muted = true;
+    video.play().catch(() => {});
+  });
+
   root.querySelectorAll(".slideshow").forEach((container) => {
     const intervalMs = readCssVar(container, "--slide-interval", 8000);
     const firstIntervalMs = readCssVar(
