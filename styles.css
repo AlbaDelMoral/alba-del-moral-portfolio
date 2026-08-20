@@ -375,9 +375,13 @@
    press/touchstart, not on release, so (unlike :hover) it works fine on
    touch without any double-tap issue. Replaces the plain
    -webkit-tap-highlight-color box removed in base.css with something
-   intentional instead of just "nothing happens until the page loads". */
-.nav-work-item:active {
-  opacity: 0.5;
+   intentional instead of just "nothing happens until the page loads".
+   Same --project-color treatment as the (hover: hover)-guarded :hover
+   rule below, so touch devices (which never get that hover rule) still
+   see the color the instant they press, not just a generic dim. */
+.nav-work-item:active .nav-work-item-title,
+.nav-work-item:active .nav-work-item-subtitle {
+  color: var(--project-color, #1daeeb);
 }
 
 /* (hover: hover) guards every :hover rule on .nav-work-item below —
@@ -1140,6 +1144,45 @@
     animation: mobile-simple-fade-in 0.5s ease forwards;
   }
 
+  /* Progressive enhancement: on browsers that support CSS scroll-driven
+     animations (animation-timeline: view()), replace the plain one-shot
+     fade above with a slow, smooth parallax-style entrance whose progress
+     is tied directly to the element's own scroll position — a real
+     compositor-driven scroll effect, not a JS-timed one, so it can't
+     race or get stuck behind the page's own load/layout the way the
+     previous IntersectionObserver+delay version could. Browsers without
+     support (current iOS Safari, notably) just keep the fade above —
+     @supports means this whole block is skipped entirely there rather
+     than silently failing. .scroll-slideshow stays opacity-only (no
+     transform) for the same position:fixed-containing-block reason
+     documented on its desktop reveal rule. */
+  @supports (animation-timeline: view()) {
+    .project-images > img,
+    .project-images > video,
+    .project-description,
+    .info-image1,
+    .info-image2,
+    .info-content,
+    .scroll-filmstrip,
+    .photo-meta-overlay {
+      animation-name: mobile-parallax-in;
+      animation-duration: 1s;
+      animation-timing-function: ease-out;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry;
+    }
+
+    .scroll-slideshow {
+      animation-name: mobile-parallax-in-opacity-only;
+      animation-duration: 1s;
+      animation-timing-function: ease-out;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry;
+    }
+  }
+
   .mobile-nav-bar {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1209,6 +1252,10 @@
   .project-images,
   .container {
     grid-column: 1 / -1;
+  }
+
+  .project-images {
+    gap: 10px;
   }
 
   /* Photography/experiments counter+location text — desktop centers it
@@ -1289,7 +1336,8 @@
   .info-view,
   .project-view {
     padding-top: 130px;
-    padding-left: 15px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   /* A bit more breathing room than the other views before the first
@@ -1317,6 +1365,26 @@
 }
 
 @keyframes mobile-simple-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-parallax-in {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mobile-parallax-in-opacity-only {
   from {
     opacity: 0;
   }
