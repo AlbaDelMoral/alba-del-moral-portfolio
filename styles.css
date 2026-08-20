@@ -1120,31 +1120,20 @@
 }
 
 @media (max-width: 1100px) {
-  /* Cancels the desktop reveal rule's opacity:0/transform/transition
-     (further up this file) — entrance animation for these is handled
-     entirely by GSAP + ScrollTrigger on mobile now (see
-     initMobileScrollReveal in slideshow.js), genuinely scroll-linked,
-     smooth, and reliable across mobile browsers including Safari/iOS
-     (unlike the CSS animation-timeline approach this replaced, which
-     iOS doesn't support yet). Resetting to the plain visible state here
-     first matters: GSAP's gsap.from() captures whatever's already there
-     as the animation's end target, so if desktop's opacity:0 leaked
-     through uncanceled, it'd be animating from its own start values
-     *to* invisible instead of to normal. It also means that if the GSAP
-     script ever fails to load, these elements just stay visible instead
-     of being stuck invisible waiting on a reveal that never comes. */
-  .project-images > img,
-  .project-images > video,
-  .project-description,
-  .info-image1,
-  .info-image2,
-  .info-content,
-  .scroll-slideshow,
-  .scroll-filmstrip,
-  .photo-meta-overlay {
-    opacity: 1;
-    transform: none;
-    transition: none;
+  /* Back to the same lightweight system desktop uses (initScrollReveal:
+     plain IntersectionObserver + CSS transition of transform/opacity —
+     see that rule earlier in this file) after two heavier experiments
+     didn't hold up on mobile: CSS animation-timeline:view() isn't
+     supported on iOS Safari at all, and GSAP/ScrollTrigger (even without
+     scrub) was still reported as laggy on both iOS Safari and Chrome —
+     so the extra dependency wasn't buying anything a plain CSS
+     transition doesn't already do more cheaply. A bit slower/gentler
+     than desktop's default here since mobile shows more of these
+     elements on screen at once (full-width stacked vs desktop's
+     multi-column layout). */
+  :root {
+    --reveal-duration: 2s;
+    --reveal-distance: 28px;
   }
 
   .mobile-nav-bar {
@@ -1260,6 +1249,19 @@
 
   .scroll-filmstrip {
     display: none;
+  }
+
+  /* .scroll-slide--vertical's desktop inset (calc((100% + 14px) / 6) etc.)
+     assumes its containing frame is exactly the 3 desktop grid columns
+     it's centered within — the math for "half a column in from each
+     edge" only works against that specific width. Since .scroll-slideshow
+     is full-width on mobile (grid-column:1/-1 above), that same formula
+     places the image at a nonsensical, off-center spot instead. Simplest
+     correct mobile behavior: match normal/max and go full-width too. */
+  .scroll-slide--vertical {
+    left: 0;
+    right: 0;
+    width: 100%;
   }
 
   /* Info page — desktop places the bio text and two images side by side

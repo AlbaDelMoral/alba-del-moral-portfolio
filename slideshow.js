@@ -297,56 +297,6 @@ function initScrollReveal(elements) {
   };
 }
 
-// Mobile's entrance animation — GSAP + ScrollTrigger instead of the
-// IntersectionObserver-based initScrollReveal above. A subtle, unhurried
-// fade with a slight upward drift as each element scrolls into view,
-// playing once (no reverse/replay on scroll back up) — deliberately
-// understated rather than flashy.
-//
-// Triggered once per element (toggleActions), NOT scrubbed to scroll
-// position — scrub ties animation progress directly to the scroll event,
-// recalculating every single scrolled pixel, which is exactly the kind
-// of continuous main-thread work that reads as lag on a phone. A normal
-// timed tween that just plays once when triggered is far cheaper (one
-// GPU-composited run, not a recompute per pixel) while still being
-// "scroll-driven" in the sense that matters here: it fires as content
-// scrolls into view. Reliably supported on mobile Safari/iOS too, unlike
-// the CSS animation-timeline attempt this replaced.
-function initMobileScrollReveal(elements) {
-  if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
-    return () => {};
-  }
-  gsap.registerPlugin(ScrollTrigger);
-
-  const triggers = Array.from(elements).map((el) => {
-    // .scroll-slideshow can't have a transform applied (it would become
-    // the containing block for its position:fixed .scroll-slide--max
-    // descendant, breaking that slide's "fill the viewport" sizing —
-    // see the comment on .scroll-slideshow's own reveal rule) — opacity
-    // only, no y-drift, for that one element specifically.
-    const vars = el.classList.contains("scroll-slideshow")
-      ? { opacity: 0 }
-      : { opacity: 0, y: 40 };
-
-    return gsap.from(el, {
-      ...vars,
-      duration: 1.1,
-      ease: "power2.out",
-      scrollTrigger: {
-        trigger: el,
-        start: "top 88%",
-        toggleActions: "play none none none",
-      },
-    });
-  });
-
-  return () => {
-    triggers.forEach((tween) => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
-    });
-  };
-}
 
 function initHoverCaption(caption, trigger) {
   const onEnter = () => caption.classList.add("visible");
@@ -637,17 +587,7 @@ function initPageEffects(root) {
     ".project-images > img, .project-images > video, .project-images-text, .project-description, .info-image1, .info-image2, .info-content, .scroll-slideshow, .scroll-filmstrip, .photo-meta-overlay",
   );
   if (revealTargets.length > 0) {
-    // Mobile gets a GSAP/ScrollTrigger-driven reveal instead (see
-    // initMobileScrollReveal) — the CSS opacity:0 this desktop system
-    // relies on is explicitly canceled for these elements on mobile
-    // (styles.css), so running both here would be fighting over nothing
-    // (initScrollReveal would just be toggling a class with no visible
-    // effect) instead of over the same property.
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      cleanups.push(safeInit(() => initMobileScrollReveal(revealTargets)));
-    } else {
-      cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
-    }
+    cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
   }
 
   const scrollSlideshow = root.querySelector(".scroll-slideshow");
