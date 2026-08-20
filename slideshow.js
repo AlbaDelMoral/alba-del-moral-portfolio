@@ -297,43 +297,6 @@ function initScrollReveal(elements) {
   };
 }
 
-// Mobile's entrance — like initScrollReveal above, each element only
-// ever reveals once and then stays revealed (never hidden again), but
-// this version additionally only lets that reveal happen while actively
-// scrolling down — scrolling up past a not-yet-revealed element just
-// leaves it hidden rather than flying it in. Direction is tracked from
-// plain scrollY deltas — IntersectionObserver itself only reports in/out,
-// not which way the page was moving when it crossed.
-function initMobileScrollReveal(elements) {
-  let lastY = window.scrollY;
-  let direction = "down";
-
-  function onScroll() {
-    const y = window.scrollY;
-    if (y !== lastY) direction = y > lastY ? "down" : "up";
-    lastY = y;
-  }
-  window.addEventListener("scroll", onScroll, { passive: true });
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && direction === "down") {
-          entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.15 },
-  );
-  elements.forEach((el) => observer.observe(el));
-
-  return () => {
-    observer.disconnect();
-    window.removeEventListener("scroll", onScroll);
-  };
-}
-
 
 function initHoverCaption(caption, trigger) {
   const onEnter = () => caption.classList.add("visible");
@@ -623,12 +586,19 @@ function initPageEffects(root) {
   const revealTargets = root.querySelectorAll(
     ".project-images > img, .project-images > video, .project-images-text, .project-description, .info-image1, .info-image2, .info-content, .scroll-slideshow, .scroll-filmstrip, .photo-meta-overlay",
   );
-  if (revealTargets.length > 0) {
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      cleanups.push(safeInit(() => initMobileScrollReveal(revealTargets)));
-    } else {
-      cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
-    }
+  // No entrance animation on mobile at all now (see styles.css) — after
+  // several attempts (CSS animation-timeline, GSAP/ScrollTrigger, a
+  // custom IntersectionObserver system), none held up reliably on real
+  // phones, and the last version was suspected of contributing to
+  // videos not autoplaying (an opacity:0, not-yet-revealed video can get
+  // its playback suspended by the same mobile power-saving behavior
+  // that affects backgrounded video generally). Desktop keeps its
+  // original, unaffected reveal system.
+  if (
+    revealTargets.length > 0 &&
+    !window.matchMedia("(max-width: 1100px)").matches
+  ) {
+    cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
   }
 
   const scrollSlideshow = root.querySelector(".scroll-slideshow");

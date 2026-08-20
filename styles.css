@@ -1120,20 +1120,29 @@
 }
 
 @media (max-width: 1100px) {
-  /* Back to the same lightweight system desktop uses (initScrollReveal:
-     plain IntersectionObserver + CSS transition of transform/opacity —
-     see that rule earlier in this file) after two heavier experiments
-     didn't hold up on mobile: CSS animation-timeline:view() isn't
-     supported on iOS Safari at all, and GSAP/ScrollTrigger (even without
-     scrub) was still reported as laggy on both iOS Safari and Chrome —
-     so the extra dependency wasn't buying anything a plain CSS
-     transition doesn't already do more cheaply. A bit slower/gentler
-     than desktop's default here since mobile shows more of these
-     elements on screen at once (full-width stacked vs desktop's
-     multi-column layout). */
-  :root {
-    --reveal-duration: 1.8s;
-    --reveal-distance: 60px;
+  /* No entrance animation on mobile at all now, after three attempts
+     (CSS animation-timeline, GSAP/ScrollTrigger, a custom
+     IntersectionObserver system) didn't hold up reliably on real
+     phones — the last version was also suspected of contributing to
+     project videos not autoplaying, since an opacity:0 (not-yet-
+     revealed) video can have its playback suspended by the same mobile
+     power-saving behavior that affects backgrounded video generally.
+     This cancels the desktop reveal rule's opacity:0/transform/
+     transition (further up this file) so these elements just render at
+     their normal, fully-visible state immediately — desktop keeps its
+     original, unaffected reveal system. */
+  .project-images > img,
+  .project-images > video,
+  .project-description,
+  .info-image1,
+  .info-image2,
+  .info-content,
+  .scroll-slideshow,
+  .scroll-filmstrip,
+  .photo-meta-overlay {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 
   .mobile-nav-bar {
@@ -1245,6 +1254,17 @@
      works fine without it. */
   .scroll-slideshow {
     grid-column: 1 / -1;
+  }
+
+  /* grid-column:1/-1 above only spans the grid's own content area, which
+     is still inset by .archive-view's shared left/right padding (10px
+     each) — same bug as .home-view had. Zeroing it here makes the
+     slideshow genuinely edge-to-edge instead of floating with a small
+     margin on each side. */
+  .archive-view--photography,
+  .archive-view--experiments {
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .scroll-filmstrip {
