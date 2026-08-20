@@ -293,7 +293,7 @@
    line) instead of "ALBA" (its first). */
 .nav-column {
   grid-column: 2;
-  margin-top: -10px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   padding-right: 10px;
@@ -1119,7 +1119,7 @@
   display: none;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
   /* No entrance animation on mobile at all now, after three attempts
      (CSS animation-timeline, GSAP/ScrollTrigger, a custom
      IntersectionObserver system) didn't hold up reliably on real
@@ -1256,32 +1256,22 @@
     grid-column: 1 / -1;
   }
 
-  /* grid-column:1/-1 above only spans the grid's own content area, which
-     is still inset by .archive-view's shared left/right padding (10px
-     each) — same bug as .home-view had. Zeroing it here makes the
-     slideshow genuinely edge-to-edge instead of floating with a small
-     margin on each side. */
-  .archive-view--photography,
-  .archive-view--experiments {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
   .scroll-filmstrip {
     display: none;
   }
 
-  /* .scroll-slide--vertical's desktop inset (calc((100% + 14px) / 6) etc.)
-     assumes its containing frame is exactly the 3 desktop grid columns
-     it's centered within — the math for "half a column in from each
-     edge" only works against that specific width. Since .scroll-slideshow
-     is full-width on mobile (grid-column:1/-1 above), that same formula
-     places the image at a nonsensical, off-center spot instead. Simplest
-     correct mobile behavior: match normal/max and go full-width too. */
+  /* Mobile treats the frame as 4 equal columns: normal images span all
+     4 (full width, within the page's own 10px margin — .archive-view's
+     shared left/right padding already provides that, nothing extra
+     needed here), max stays exactly as-is (full-viewport, unaffected by
+     this), and vertical spans just the middle 2 of 4 (columns 2-3 = the
+     middle 50%) — narrower and centered, rather than desktop's inset
+     calc (which assumed a 3-desktop-column-wide frame that no longer
+     applies here). */
   .scroll-slide--vertical {
-    left: 0;
-    right: 0;
-    width: 100%;
+    left: 25%;
+    right: auto;
+    width: 50%;
   }
 
   /* Info page — desktop places the bio text and two images side by side
@@ -1360,4 +1350,3 @@
     transform: translateY(0);
   }
 }
-
