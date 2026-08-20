@@ -1132,8 +1132,8 @@
      elements on screen at once (full-width stacked vs desktop's
      multi-column layout). */
   :root {
-    --reveal-duration: 2s;
-    --reveal-distance: 28px;
+    --reveal-duration: 1.8s;
+    --reveal-distance: 60px;
   }
 
   .mobile-nav-bar {

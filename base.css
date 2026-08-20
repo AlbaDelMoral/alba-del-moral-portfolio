@@ -66,6 +66,13 @@ body {
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
+  /* Belt-and-suspenders alongside overflow-x:hidden — this tells the
+     browser to only ever honor vertical touch panning at all, so even a
+     slightly-diagonal swipe (or a stray element poking past the edge)
+     can't be interpreted as horizontal scroll/rubber-band in the first
+     place, instead of relying on overflow alone to clip it after the
+     fact. */
+  touch-action: pan-y;
   font-family: "ABCROM", sans-serif;
   /* Without this, mobile Safari (and some Android browsers) silently
      inflate text size on rotation to landscape — most noticeable on the
