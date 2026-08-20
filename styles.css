@@ -109,6 +109,7 @@
 .home-view {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: rgb(255, 255, 255);
   padding-top: 0;
   padding-bottom: 0;
@@ -520,6 +521,7 @@
     scrolls with this page's content instead of staying pinned to the
     viewport like a fixed overlay would */
   min-height: 100vh;
+  min-height: 100dvh;
   background: #fff;
   align-items: start;
 }
@@ -552,6 +554,7 @@
 .project-images video.project-video-narrow {
   width: auto;
   height: 100vh;
+  height: 100dvh;
   max-width: 100%;
   align-self: center;
 }
@@ -590,6 +593,7 @@
 /* Archive page */
 .archive-view {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #fff;
 }
 
@@ -608,6 +612,7 @@
 .archive-view--photography,
 .archive-view--experiments {
   height: 100vh;
+  height: 100dvh;
   /* border-box so this 100vh is the true, full box (padding included in
      it, not added on top) — .scroll-slideshow/.scroll-filmstrip below
      are positioned off of this box directly, ignoring the grid's own
@@ -714,6 +719,7 @@
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   object-fit: cover;
   z-index: 1;
   pointer-events: none;
@@ -728,6 +734,7 @@
   left: 0;
   right: 0;
   height: 100vh;
+  height: 100dvh;
   position: absolute;
   top: 0;
   bottom: 0;
@@ -769,6 +776,7 @@
    text takes the rest (5-8). */
 .info-view {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #fff;
   align-items: start;
   column-gap: 4px;
@@ -1108,19 +1116,28 @@
 }
 
 @media (max-width: 1100px) {
-  /* Slower/longer entrance for project images on mobile — with images
-     stacked full-width, more of them are on screen at once than on
-     desktop's multi-column layout, so a quicker/subtler reveal there
-     reads as more abrupt here. */
-  :root {
-    --reveal-duration: 2.2s;
-    --reveal-distance: 32px;
-    /* Above-the-fold content (no scroll needed to see it) reveals as
-       soon as the page settles rather than instantly on navigation —
-       without this, the entrance can race the page's own load/layout
-       and end up looking like it never animated at all for exactly the
-       images that don't require scrolling to trigger it. */
-    --reveal-delay: 500;
+  /* Simple, JS-independent fade instead of the desktop reveal system
+     (IntersectionObserver + delay + slide-up transition) — that
+     delay/slide combo was reading as a stutter on mobile, on top of
+     racing the page's own load/layout right after navigation. A plain
+     CSS @keyframes animation just runs the moment each element is
+     rendered, no JS timing involved at all, so there's nothing for it
+     to race or get stuck behind. initScrollReveal in slideshow.js still
+     runs and still adds .is-visible, harmlessly — this overrides the
+     opacity/transform it would otherwise control. */
+  .project-images > img,
+  .project-images > video,
+  .project-description,
+  .info-image1,
+  .info-image2,
+  .info-content,
+  .scroll-slideshow,
+  .scroll-filmstrip,
+  .photo-meta-overlay {
+    opacity: 0;
+    transform: none;
+    transition: none;
+    animation: mobile-simple-fade-in 0.5s ease forwards;
   }
 
   .mobile-nav-bar {
@@ -1275,6 +1292,12 @@
     padding-left: 15px;
   }
 
+  /* A bit more breathing room than the other views before the first
+     project image starts. */
+  .project-view {
+    padding-top: 300px;
+  }
+
   /* Bigger than desktop's 9pt — .nav-work-item-title is shared by both
      the Works and Archive lists, so this covers both at once. */
   .menu.is-nav-open .nav-work-item-title {
@@ -1290,5 +1313,14 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes mobile-simple-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
