@@ -1120,15 +1120,19 @@
 }
 
 @media (max-width: 1100px) {
-  /* Simple, JS-independent fade instead of the desktop reveal system
-     (IntersectionObserver + delay + slide-up transition) — that
-     delay/slide combo was reading as a stutter on mobile, on top of
-     racing the page's own load/layout right after navigation. A plain
-     CSS @keyframes animation just runs the moment each element is
-     rendered, no JS timing involved at all, so there's nothing for it
-     to race or get stuck behind. initScrollReveal in slideshow.js still
-     runs and still adds .is-visible, harmlessly — this overrides the
-     opacity/transform it would otherwise control. */
+  /* Cancels the desktop reveal rule's opacity:0/transform/transition
+     (further up this file) — entrance animation for these is handled
+     entirely by GSAP + ScrollTrigger on mobile now (see
+     initMobileScrollReveal in slideshow.js), genuinely scroll-linked,
+     smooth, and reliable across mobile browsers including Safari/iOS
+     (unlike the CSS animation-timeline approach this replaced, which
+     iOS doesn't support yet). Resetting to the plain visible state here
+     first matters: GSAP's gsap.from() captures whatever's already there
+     as the animation's end target, so if desktop's opacity:0 leaked
+     through uncanceled, it'd be animating from its own start values
+     *to* invisible instead of to normal. It also means that if the GSAP
+     script ever fails to load, these elements just stay visible instead
+     of being stuck invisible waiting on a reveal that never comes. */
   .project-images > img,
   .project-images > video,
   .project-description,
@@ -1138,49 +1142,9 @@
   .scroll-slideshow,
   .scroll-filmstrip,
   .photo-meta-overlay {
-    opacity: 0;
+    opacity: 1;
     transform: none;
     transition: none;
-    animation: mobile-simple-fade-in 0.5s ease forwards;
-  }
-
-  /* Progressive enhancement: on browsers that support CSS scroll-driven
-     animations (animation-timeline: view()), replace the plain one-shot
-     fade above with a slow, smooth parallax-style entrance whose progress
-     is tied directly to the element's own scroll position — a real
-     compositor-driven scroll effect, not a JS-timed one, so it can't
-     race or get stuck behind the page's own load/layout the way the
-     previous IntersectionObserver+delay version could. Browsers without
-     support (current iOS Safari, notably) just keep the fade above —
-     @supports means this whole block is skipped entirely there rather
-     than silently failing. .scroll-slideshow stays opacity-only (no
-     transform) for the same position:fixed-containing-block reason
-     documented on its desktop reveal rule. */
-  @supports (animation-timeline: view()) {
-    .project-images > img,
-    .project-images > video,
-    .project-description,
-    .info-image1,
-    .info-image2,
-    .info-content,
-    .scroll-filmstrip,
-    .photo-meta-overlay {
-      animation-name: mobile-parallax-in;
-      animation-duration: 1s;
-      animation-timing-function: ease-out;
-      animation-fill-mode: both;
-      animation-timeline: view();
-      animation-range: entry;
-    }
-
-    .scroll-slideshow {
-      animation-name: mobile-parallax-in-opacity-only;
-      animation-duration: 1s;
-      animation-timing-function: ease-out;
-      animation-fill-mode: both;
-      animation-timeline: view();
-      animation-range: entry;
-    }
   }
 
   .mobile-nav-bar {
@@ -1258,6 +1222,14 @@
     gap: 10px;
   }
 
+  /* .home-view zeroes its own top/bottom/right padding but not left, so
+     the slideshow still had a 30px gap on the left (the base grid rule's
+     padding-left, meant for desktop's logo column). Full-bleed, no
+     margins at all. */
+  .home-view {
+    padding-left: 0;
+  }
+
   /* Photography/experiments counter+location text — desktop centers it
      within columns 4/7 of the 8-column grid, which on a narrow mobile
      screen lands off-center in a cramped, arbitrary-looking slice. Also
@@ -1330,8 +1302,11 @@
   /* Pushes page content down clear of the fixed header. Also equalizes
      the left/right padding (desktop's 30px/15px asymmetry existed to
      balance the side-by-side logo/nav columns, which no longer apply
-     once the nav becomes a top bar). */
-  .home-view,
+     once the nav becomes a top bar). .home-view is deliberately excluded
+     — it's a full-bleed hero slideshow, not scrollable stacked content,
+     so it stays edge-to-edge with the header simply overlaying it
+     (position:fixed, its own opaque background) instead of being pushed
+     down like the others. */
   .archive-view,
   .info-view,
   .project-view {
@@ -1364,31 +1339,3 @@
   }
 }
 
-@keyframes mobile-simple-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes mobile-parallax-in {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes mobile-parallax-in-opacity-only {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}

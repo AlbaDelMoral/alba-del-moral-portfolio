@@ -81,6 +81,28 @@ function initScrollSlideshow(container, filmstrip) {
     goTo(current + (event.key === "ArrowDown" ? 1 : -1));
   }
 
+  // Touch swipe — mobile devices don't fire wheel events at all, so
+  // without this a swipe just scrolls the page underneath instead of
+  // navigating the slideshow (nothing else here claims the gesture).
+  // touchmove's preventDefault is what actually stops that page scroll;
+  // direction/step is decided on touchend, once the full gesture length
+  // is known, same one-step-per-gesture idea as onWheel.
+  let touchStartY = null;
+  function onTouchStart(event) {
+    touchStartY = event.touches[0].clientY;
+  }
+  function onTouchMove(event) {
+    if (touchStartY === null) return;
+    event.preventDefault();
+  }
+  function onTouchEnd(event) {
+    if (touchStartY === null) return;
+    const deltaY = touchStartY - event.changedTouches[0].clientY;
+    touchStartY = null;
+    if (Math.abs(deltaY) < 24) return; // ignore taps/jitter, not real swipes
+    goTo(current + (deltaY > 0 ? 1 : -1));
+  }
+
   // Clicking a thumbnail jumps straight to that photo instead of
   // scrolling one by one.
   const onThumbClick = (index) => () => goTo(index);
@@ -94,15 +116,31 @@ function initScrollSlideshow(container, filmstrip) {
   centerThumb(current);
   updateMeta(current);
   syncVideoPlayback(slides);
+  // Belt-and-suspenders alongside touchmove's preventDefault above: locks
+  // html/body scroll outright for as long as this page is active, so
+  // there's nothing for a swipe to fall through to and scroll even if a
+  // gesture starts somewhere preventDefault doesn't fully reach (e.g. an
+  // iOS rubber-band/overscroll bounce, which can trigger independent of
+  // whether the page actually has real overflow to scroll).
+  document.documentElement.classList.add("process-overlay-scroll-lock");
+  document.body.classList.add("process-overlay-scroll-lock");
   // Listens on the whole document, not just `container` — the slideshow
   // frame only fills part of the viewport, so a listener scoped to it
   // only caught wheel events while the cursor was exactly over the image.
   document.addEventListener("wheel", onWheel, { passive: false });
   document.addEventListener("keydown", onKeydown);
+  document.addEventListener("touchstart", onTouchStart, { passive: true });
+  document.addEventListener("touchmove", onTouchMove, { passive: false });
+  document.addEventListener("touchend", onTouchEnd);
   return () => {
     clearTimeout(unlockTimer);
+    document.documentElement.classList.remove("process-overlay-scroll-lock");
+    document.body.classList.remove("process-overlay-scroll-lock");
     document.removeEventListener("wheel", onWheel);
     document.removeEventListener("keydown", onKeydown);
+    document.removeEventListener("touchstart", onTouchStart);
+    document.removeEventListener("touchmove", onTouchMove);
+    document.removeEventListener("touchend", onTouchEnd);
     thumbs.forEach((thumb, index) =>
       thumb.removeEventListener("click", thumbClickHandlers[index]),
     );
@@ -256,6 +294,51 @@ function initScrollReveal(elements) {
     observer.disconnect();
     window.removeEventListener("scroll", onScroll);
     window.removeEventListener("resize", onScroll);
+  };
+}
+
+// Mobile's entrance animation — GSAP + ScrollTrigger instead of the
+// IntersectionObserver-based initScrollReveal above. A subtle, unhurried
+// fade with a slight upward drift as each element scrolls into view,
+// playing once (no reverse/replay on scroll back up) — deliberately
+// understated rather than flashy. Genuinely scroll-linked (ScrollTrigger
+// ties animation progress to actual scroll position via the "scrub"
+// option below), which is what makes it read as smooth instead of an
+// abrupt pop-in, and unlike the CSS animation-timeline attempt this
+// replaced, it's reliably supported on mobile Safari/iOS too.
+function initMobileScrollReveal(elements) {
+  if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
+    return () => {};
+  }
+  gsap.registerPlugin(ScrollTrigger);
+
+  const triggers = Array.from(elements).map((el) => {
+    // .scroll-slideshow can't have a transform applied (it would become
+    // the containing block for its position:fixed .scroll-slide--max
+    // descendant, breaking that slide's "fill the viewport" sizing —
+    // see the comment on .scroll-slideshow's own reveal rule) — opacity
+    // only, no y-drift, for that one element specifically.
+    const vars = el.classList.contains("scroll-slideshow")
+      ? { opacity: 0 }
+      : { opacity: 0, y: 40 };
+
+    return gsap.from(el, {
+      ...vars,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: el,
+        start: "top 88%",
+        end: "top 55%",
+        scrub: 0.6,
+      },
+    });
+  });
+
+  return () => {
+    triggers.forEach((tween) => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+    });
   };
 }
 
@@ -548,7 +631,17 @@ function initPageEffects(root) {
     ".project-images > img, .project-images > video, .project-images-text, .project-description, .info-image1, .info-image2, .info-content, .scroll-slideshow, .scroll-filmstrip, .photo-meta-overlay",
   );
   if (revealTargets.length > 0) {
-    cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
+    // Mobile gets a GSAP/ScrollTrigger-driven reveal instead (see
+    // initMobileScrollReveal) — the CSS opacity:0 this desktop system
+    // relies on is explicitly canceled for these elements on mobile
+    // (styles.css), so running both here would be fighting over nothing
+    // (initScrollReveal would just be toggling a class with no visible
+    // effect) instead of over the same property.
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      cleanups.push(safeInit(() => initMobileScrollReveal(revealTargets)));
+    } else {
+      cleanups.push(safeInit(() => initScrollReveal(revealTargets)));
+    }
   }
 
   const scrollSlideshow = root.querySelector(".scroll-slideshow");
