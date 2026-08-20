@@ -301,11 +301,17 @@ function initScrollReveal(elements) {
 // IntersectionObserver-based initScrollReveal above. A subtle, unhurried
 // fade with a slight upward drift as each element scrolls into view,
 // playing once (no reverse/replay on scroll back up) — deliberately
-// understated rather than flashy. Genuinely scroll-linked (ScrollTrigger
-// ties animation progress to actual scroll position via the "scrub"
-// option below), which is what makes it read as smooth instead of an
-// abrupt pop-in, and unlike the CSS animation-timeline attempt this
-// replaced, it's reliably supported on mobile Safari/iOS too.
+// understated rather than flashy.
+//
+// Triggered once per element (toggleActions), NOT scrubbed to scroll
+// position — scrub ties animation progress directly to the scroll event,
+// recalculating every single scrolled pixel, which is exactly the kind
+// of continuous main-thread work that reads as lag on a phone. A normal
+// timed tween that just plays once when triggered is far cheaper (one
+// GPU-composited run, not a recompute per pixel) while still being
+// "scroll-driven" in the sense that matters here: it fires as content
+// scrolls into view. Reliably supported on mobile Safari/iOS too, unlike
+// the CSS animation-timeline attempt this replaced.
 function initMobileScrollReveal(elements) {
   if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
     return () => {};
@@ -324,12 +330,12 @@ function initMobileScrollReveal(elements) {
 
     return gsap.from(el, {
       ...vars,
+      duration: 1.1,
       ease: "power2.out",
       scrollTrigger: {
         trigger: el,
         start: "top 88%",
-        end: "top 55%",
-        scrub: 0.6,
+        toggleActions: "play none none none",
       },
     });
   });
