@@ -1247,13 +1247,21 @@
   /* The main slideshow image was squeezed into desktop's 3-of-8-column
      span (grid-column:4/7), which on a narrow screen renders as a tiny
      image floating in mostly-empty space instead of filling the screen.
-     Full-bleed here, same reasoning as .project-images/.container above.
+     grid-column:1/-1 alone was still landing slightly off — a grid area
+     is a less direct way to say "10px in from each true edge" than just
+     saying that outright, so this drops the grid-column dependency and
+     sets left/right explicitly instead, matching the page's own 10px
+     margin exactly and unambiguously (both axes then resolve against
+     .archive-view--photography's own padding box, which — border-box +
+     100dvh — is exactly the full viewport, regardless of its padding).
      The filmstrip (desktop's thumbnail rail, grid-column:8) has no room
      to work as a visual thumbnail strip at this width, so it's hidden —
      wheel/keyboard/swipe navigation through initScrollSlideshow still
      works fine without it. */
   .scroll-slideshow {
-    grid-column: 1 / -1;
+    grid-column: auto;
+    left: 10px;
+    right: 10px;
   }
 
   .scroll-filmstrip {
