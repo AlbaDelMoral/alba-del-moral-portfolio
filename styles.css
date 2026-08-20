@@ -1176,7 +1176,6 @@
     left: 0;
     right: 0;
     z-index: 101;
-    background: #fff;
     padding: 20px 15px 15px;
   }
 
@@ -1207,13 +1206,21 @@
   .menu.is-nav-open .nav-column {
     display: flex;
     position: fixed;
-    top: var(--mobile-nav-bar-height, 90px);
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 100;
     background: #fff;
-    padding: 20px 15px 30px;
+    /* Cancels the base .nav-column rule's margin-top:12px (meant for
+       aligning "Works" with the logo's second line in desktop's normal
+       flow — doesn't apply here, this is position:fixed). Background
+       starts at the true top (covering the navbar area too, since
+       .mobile-nav-bar has no background of its own anymore), but the
+       actual links still start further down — top padding accounts for
+       that instead of the container's own position. */
+    margin-top: 0;
+    padding: 100px 15px 30px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     animation: mobile-nav-in 0.3s ease;
