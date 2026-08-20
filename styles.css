@@ -384,6 +384,18 @@
   color: var(--project-color, #1daeeb);
 }
 
+/* Without this, the archive links (photography/Experiments/etc.) get
+   dimmed to opacity:0.4 whenever a project page is active (see the
+   :has() dimming rule further down) — the color change above still
+   happens on press, but at 0.4 opacity it reads as barely-there instead
+   of a clear "yes, this registered" signal. !important because that
+   dimming rule out-specifies a plain :active selector (its :has()
+   arguments count toward specificity) — same reasoning as the existing
+   :hover opacity override below. */
+.nav-work-item:active {
+  opacity: 1 !important;
+}
+
 /* (hover: hover) guards every :hover rule on .nav-work-item below —
    without it, a touchscreen tap on these <a> links registers as
    "entering" the hover state first, and needs a *second* tap to actually
@@ -1145,6 +1157,16 @@
     transition: none;
   }
 
+  /* grid-column:5 centers the dots within the middle of the 8-column
+     grid on desktop, but that's not the true horizontal center of a
+     narrow mobile screen. Spanning the full row and centering within
+     that instead makes it exactly viewport-centered regardless of
+     screen width. */
+  .page-loader-dots {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
   .mobile-nav-bar {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1174,16 +1196,8 @@
     border-radius: 50%;
   }
 
-  .mobile-nav-dot:nth-child(1) {
-    background: #ff6b6b;
-  }
-
-  .mobile-nav-dot:nth-child(2) {
-    background: #8e7cc3;
-  }
-
-  .mobile-nav-dot:nth-child(3) {
-    background: #2ec4b6;
+  .mobile-nav-dot {
+    background: #9f9f9f;
   }
 
   .nav-column {
